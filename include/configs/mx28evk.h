@@ -99,9 +99,10 @@
 		"512k(environment),"		\
 		"512k(redundant-environment),"	\
 		"4m(kernel),"			\
-		"512k(fdt),"			\
-		"8m(ramdisk),"			\
-		"-(filesystem)"
+		"128k(fdt),"			\
+		"896k(pad1),"			\
+		"11m(pad2),"			\
+		"236m(filesystem)"
 #endif
 
 /* FEC Ethernet on SoC */
@@ -156,7 +157,7 @@
 #endif
 
 /* Boot Linux */
-#define CONFIG_BOOTDELAY	1
+#define CONFIG_BOOTDELAY	5
 #define CONFIG_BOOTFILE		"uImage"
 #define CONFIG_LOADADDR		0x42000000
 #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
@@ -307,19 +308,17 @@
 			"fi; " \
 		"else " \
 			"bootz; " \
-		"fi;\0"
+		"fi;\0" \
+	"serverip=192.168.0.140\0"\
+	"ipaddr=192.168.0.126\0"\
+	"ethaddr=00:0c:29:d7:cd:3e\0"\
+	"netmask=255.255.255.0\0"\
+	"bootargs=noinitrd console=ttyAMA0,115200 ubi.mtd=1 root=ubi0:rootfs0 rootfstype=ubifs rw gpmi\0"\
+	"nandboot=nand read 0x42000000 0x400000 0x300000; bootm 0x42000000"
+
 
 #define CONFIG_BOOTCOMMAND \
-	"mmc dev ${mmcdev}; if mmc rescan; then " \
-		"if run loadbootscript; then " \
-			"run bootscript; " \
-		"else " \
-			"if run loadimage; then " \
-				"run mmcboot; " \
-			"else run netboot; " \
-			"fi; " \
-		"fi; " \
-	"else run netboot; fi"
+	"run nandboot" 
 
 /* The rest of the configuration is shared */
 #include <configs/mxs.h>

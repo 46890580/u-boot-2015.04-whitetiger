@@ -234,6 +234,9 @@ HOSTOS := $(shell uname -s | tr '[:upper:]' '[:lower:]' | \
 
 export	HOSTARCH HOSTOS
 
+ARCH = arm
+CROSS_COMPILE = arm-poky-linux-gnueabi-
+
 #########################################################################
 
 # set default to nothing for native builds
