@@ -15,6 +15,9 @@
 #define CONFIG_MX28				/* i.MX28 SoC */
 #define CONFIG_MACH_TYPE	MACH_TYPE_MX28EVK
 
+/* SPL */
+#define CONFIG_SPL_SERIAL_SUPPORT
+
 /* U-Boot Commands */
 #define CONFIG_SYS_NO_FLASH
 #include <config_cmd_default.h>

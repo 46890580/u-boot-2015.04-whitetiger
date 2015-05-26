@@ -28,7 +28,7 @@ static uint32_t dram_vals[] = {
 	0x00000000, 0x00000100, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00010101, 0x01010101,
-	0x000f0f01, 0x0f02020a, 0x00000000, 0x00010101,
+	0x000f0f01, 0x0102010a, 0x00000000, 0x00010101,
 	0x00000100, 0x00000100, 0x00000000, 0x00000002,
 	0x01010000, 0x07080403, 0x06005003, 0x0a0000c8,
 	0x02009c40, 0x0002030c, 0x0036a609, 0x031a0612,
@@ -229,6 +229,9 @@ static void mxs_mem_setup_vdda(void)
 
 uint32_t mxs_mem_get_size(void)
 {
+#if TEST_MEMORY
+    uint32_t i, val;
+#endif
 	uint32_t sz, da;
 	uint32_t *vt = (uint32_t *)0x20;
 	/* The following is "subs pc, r14, #4", used as return from DABT. */
@@ -242,6 +245,22 @@ uint32_t mxs_mem_get_size(void)
 
 	/* Restore the old DABT handler. */
 	vt[4] = da;
+
+#if TEST_MEMORY
+    printf("TEST: writing...\r\n");
+    for (i = 0; i < 0x4000000; i++) {
+         *((unsigned int *)(PHYS_SDRAM_1 + (i<<2)))= i | 0xA0000000;
+    }
+
+    printf("TEST: reading...\r\n");
+    for (i = 0; i < 0x4000000; i++) {
+        val = *((unsigned int *)(PHYS_SDRAM_1 + (i<<2)));
+        if (val != (i | 0xA0000000)) {
+            printf("addr: 0x%x,", i);
+            printf(" val: 0x%x\r\n", val);
+        }
+    }
+#endif
 
 	return sz;
 }

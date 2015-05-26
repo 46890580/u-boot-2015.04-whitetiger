@@ -57,6 +57,12 @@ U_BOOT_CMD(
 #endif
 
 U_BOOT_CMD(
+	powerdown, 1, 0,	do_powerdown,
+	"Perform powerdown of the CPU",
+	""
+);
+
+U_BOOT_CMD(
 	reset, 1, 0,	do_reset,
 	"Perform RESET of the CPU",
 	""

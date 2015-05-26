@@ -28,6 +28,7 @@ inline void lowlevel_init(void) {}
 
 void reset_cpu(ulong ignored) __attribute__((noreturn));
 
+#if 0
 void reset_cpu(ulong ignored)
 {
 	struct mxs_rtc_regs *rtc_regs =
@@ -48,6 +49,33 @@ void reset_cpu(ulong ignored)
 	/* Endless loop, reset will exit from here */
 	for (;;)
 		;
+}
+#else
+void reset_cpu(ulong ignored)
+{
+	struct mxs_power_regs *pwr_regs = (struct mxs_power_regs *)MXS_POWER_BASE;
+	struct mxs_clkctrl_regs *clkctrl_regs = (struct mxs_clkctrl_regs *)MXS_CLKCTRL_BASE;
+    struct mxs_rtc_regs *rtc_regs = (struct mxs_rtc_regs *)MXS_RTC_BASE;
+
+    setbits_le32(&rtc_regs->hw_rtc_persistent2, 1);
+    while (readl(&rtc_regs->hw_rtc_stat) & RTC_STAT_NEW_REGS_MASK);
+
+	clrbits_le32(&pwr_regs->hw_power_minpwr, 0xFFFFFFFF);
+
+	writel(CLKCTRL_RESET_CHIP, &clkctrl_regs->hw_clkctrl_reset);
+
+	/* Endless loop, reset will exit from here */
+	for (;;)
+		;
+}
+#endif
+int do_powerdown(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+ 	struct mxs_power_regs *pwr_regs = (struct mxs_power_regs *)MXS_POWER_BASE;
+
+    writel(POWER_RESET_UNLOCK_KEY | 1, &pwr_regs->hw_power_reset);
+
+    return 0;
 }
 
 void enable_caches(void)

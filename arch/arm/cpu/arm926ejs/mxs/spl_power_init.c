@@ -80,7 +80,7 @@ static void mxs_power_clock2pll(void)
  * bit to work around a design bug on MX28EVK Rev. A .
  */
 
-static void mxs_power_set_auto_restart(void)
+void mxs_power_set_auto_restart(void)
 {
 	struct mxs_rtc_regs *rtc_regs =
 		(struct mxs_rtc_regs *)MXS_RTC_BASE;
@@ -95,7 +95,8 @@ static void mxs_power_set_auto_restart(void)
 	while (readl(&rtc_regs->hw_rtc_ctrl) & RTC_CTRL_CLKGATE)
 		;
 
-	/* Do nothing if flag already set */
+/* wang luheng comment it out to be consistent with imx-bootlets */	/* Do nothing if flag already set */
+#if 0
 	if (readl(&rtc_regs->hw_rtc_persistent0) & RTC_PERSISTENT0_AUTO_RESTART)
 		return;
 
@@ -110,6 +111,7 @@ static void mxs_power_set_auto_restart(void)
 		;
 	while (readl(&rtc_regs->hw_rtc_stat) & RTC_STAT_STALE_REGS_MASK)
 		;
+#endif
 }
 
 /**
@@ -661,9 +663,10 @@ static void mxs_powerdown(void)
 		(struct mxs_power_regs *)MXS_POWER_BASE;
 
 	debug("Powering Down\n");
+    early_delay(100);
 
 	writel(POWER_RESET_UNLOCK_KEY, &power_regs->hw_power_reset);
-	writel(POWER_RESET_UNLOCK_KEY | POWER_RESET_PWD_OFF,
+	writel(POWER_RESET_UNLOCK_KEY | POWER_RESET_PWD,
 		&power_regs->hw_power_reset);
 }
 
@@ -869,18 +872,28 @@ static void mxs_power_configure_power_source(void)
 		(struct mxs_power_regs *)MXS_POWER_BASE;
 	struct mxs_lradc_regs *lradc_regs =
 		(struct mxs_lradc_regs *)MXS_LRADC_BASE;
+    struct mxs_rtc_regs   *rtc_regs   = (struct mxs_rtc_regs   *)MXS_RTC_BASE;
 
 	debug("SPL: Configuring power source\n");
 
 	mxs_src_power_init();
 
+    /* wangluheng: catch up power_prep. clear bit 11 and 12 of PERSISTENT1 */
+    clrbits_le32(&rtc_regs->hw_rtc_persistent1, 0x1800);
+    batt_good = mxs_is_batt_good();
+
 	if (readl(&power_regs->hw_power_sts) & POWER_STS_VDD5V_GT_VDDIO) {
 		batt_ready = mxs_is_batt_ready();
+
+/* wangluheng: comment out to always boot from 5v if 5v is available. */
+#if 0
 		if (batt_ready) {
 			/* 5V source detected, good battery detected. */
 			mxs_batt_boot();
-		} else {
-			batt_good = mxs_is_batt_good();
+		}
+        else
+#endif
+        {
 			if (!batt_good) {
 				/* 5V source detected, bad battery detected. */
 				writel(LRADC_CONVERSION_AUTOMATIC,

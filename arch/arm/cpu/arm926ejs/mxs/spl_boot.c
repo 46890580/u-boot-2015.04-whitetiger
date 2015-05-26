@@ -51,6 +51,58 @@ static const iomux_cfg_t iomux_boot[] = {
 	MX23_PAD_LCD_D05__GPIO_1_5 | MUX_CONFIG_BOOTMODE_PAD,
 #endif
 };
+extern void mxs_power_set_auto_restart(void);
+#define DELAY_FOR_RESET 200000
+static void mxs_init_rtc_source(void)
+{
+    struct mxs_rtc_regs *rtc_regs = (struct mxs_rtc_regs *)MXS_RTC_BASE;
+    unsigned int persistent0;
+    unsigned int persistent2;
+    unsigned int secs;
+    int is_reset = 0;
+
+    mxs_power_set_auto_restart();
+    persistent0 = readl(&rtc_regs->hw_rtc_persistent0);
+    secs = readl(&rtc_regs->hw_rtc_seconds);
+
+    if (!(persistent0 & RTC_PERSISTENT0_CLOCKSOURCE)) {
+        printf("RTC:    ext 32.768k, set for the first time\r\n");
+        clrsetbits_le32(&rtc_regs->hw_rtc_persistent0,
+            RTC_PERSISTENT0_XTAL32_FREQ,
+            RTC_PERSISTENT0_CLOCKSOURCE | RTC_PERSISTENT0_XTAL32KHZ_PWRUP);
+        while (readl(&rtc_regs->hw_rtc_stat) & RTC_STAT_NEW_REGS_MASK);
+    } else {
+        printf("RTC:    ext 32.768k, set previously\r\n");
+    }
+
+    persistent2 = readl(&rtc_regs->hw_rtc_persistent2);
+    if (persistent2 & 1) {
+        printf("RESET:  u-boot\r\n");
+        clrbits_le32(&rtc_regs->hw_rtc_persistent2, 1);
+        is_reset = 1;
+    } else if (persistent2 & 2) {
+        printf("RESET:  linux reboot\r\n");
+        clrbits_le32(&rtc_regs->hw_rtc_persistent2, 2);
+        is_reset = 1;
+    } else if (persistent0 & RTC_PERSISTENT0_EXTERNAL_RESET) {
+        printf("RESET:  reset pin");
+        clrbits_le32(&rtc_regs->hw_rtc_persistent0, RTC_PERSISTENT0_EXTERNAL_RESET);
+        is_reset = 1;
+    } else if (persistent0 & RTC_PERSISTENT0_THERMAL_RESET) {
+        printf("RESET:  thermal reset");
+        clrbits_le32(&rtc_regs->hw_rtc_persistent0, RTC_PERSISTENT0_THERMAL_RESET);
+        is_reset = 1;
+    } else if (persistent0 & RTC_PERSISTENT0_AUTO_RESTART) {
+        printf("RESET:  auto restart");
+        clrbits_le32(&rtc_regs->hw_rtc_persistent0, RTC_PERSISTENT0_AUTO_RESTART);
+        is_reset = 1;
+    } else {
+        printf("PWRUP:  cold power on\r\n");
+    }
+
+    if (is_reset)
+        early_delay(DELAY_FOR_RESET);
+}
 
 static uint8_t mxs_get_bootmode_index(void)
 {
@@ -89,6 +141,10 @@ static uint8_t mxs_get_bootmode_index(void)
 			break;
 	}
 
+    printf("BOOT:   ");
+    printf(mxs_boot_modes[i].mode);
+    printf("\r\n");
+
 	return i;
 }
 
@@ -122,15 +178,26 @@ void mxs_common_spl_init(const uint32_t arg, const uint32_t *resptr,
 {
 	struct mxs_spl_data *data = (struct mxs_spl_data *)
 		((CONFIG_SYS_TEXT_BASE - sizeof(struct mxs_spl_data)) & ~0xf);
-	uint8_t bootmode = mxs_get_bootmode_index();
+	uint8_t bootmode;
 	gd = &gdata;
 
 	mxs_spl_fixup_vectors();
 
 	mxs_iomux_setup_multiple_pads(iomux_setup, iomux_size);
-
 	mxs_spl_console_init();
 	debug("SPL: Serial Console Initialised\n");
+
+    printf("\r\n[SPL]   begin...\r\n");
+
+#if 0
+    /* if reset, then delay to let DCDC have time to restore, then we can detect battery properly */
+    mxs_init_rtc_source();
+#else
+    /* no matter reset or cold start, delay always */
+    early_delay(DELAY_FOR_RESET);
+#endif
+
+    bootmode = mxs_get_bootmode_index();
 
 	mxs_power_init();
 
@@ -140,6 +207,7 @@ void mxs_common_spl_init(const uint32_t arg, const uint32_t *resptr,
 	data->boot_mode_idx = bootmode;
 
 	mxs_power_wait_pswitch();
+    printf("[SPL]   done\r\n\r\n");
 
 	if (mxs_boot_modes[data->boot_mode_idx].boot_pads == MXS_BM_JTAG) {
 		debug("SPL: Waiting for JTAG user\n");
