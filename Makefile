@@ -962,6 +962,8 @@ u-boot-signed.sb: u-boot.bin spl/u-boot-spl.bin
 	$(Q)$(MAKE) $(build)=arch/arm/cpu/arm926ejs/mxs u-boot-signed.sb
 u-boot.sb: u-boot.bin spl/u-boot-spl.bin
 	$(Q)$(MAKE) $(build)=arch/arm/cpu/arm926ejs/mxs u-boot.sb
+u-boot.nand: u-boot.sb
+	$(objtree)/tools/mxsboot nand u-boot.sb u-boot.nand
 
 # On x600 (SPEAr600) U-Boot is appended to U-Boot SPL.
 # Both images are created using mkimage (crc etc), so that the ROM
