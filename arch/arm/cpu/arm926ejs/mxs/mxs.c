@@ -268,9 +268,7 @@ __weak void mx28_adjust_mac(int dev_id, unsigned char *mac)
 {
 	mac[0] = 0x00;
 	mac[1] = 0x04; /* Use FSL vendor MAC address by default */
-
-	if (dev_id == 1) /* Let MAC1 be MAC0 + 1 by default */
-		mac[5] += 1;
+	mac[2] = 0x9f;
 }
 
 #ifdef	CONFIG_MX28_FEC_MAC_IN_OCOTP
@@ -292,9 +290,9 @@ void imx_get_mac_from_fuse(int dev_id, unsigned char *mac)
 		return;
 	}
 
-	data = readl(&ocotp_regs->hw_ocotp_cust0);
+	data = readl(&ocotp_regs->hw_ocotp_cust0 + 0x160);
 
-	mac[2] = (data >> 24) & 0xff;
+	//mac[2] = (data >> 24) & 0xff;
 	mac[3] = (data >> 16) & 0xff;
 	mac[4] = (data >> 8) & 0xff;
 	mac[5] = data & 0xff;

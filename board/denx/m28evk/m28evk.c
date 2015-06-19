@@ -137,11 +137,13 @@ int board_eth_init(bd_t *bis)
 		return ret;
 	}
 
+#if 0
 	ret = fecmxc_initialize_multi(bis, 1, 3, MXS_ENET1_BASE);
 	if (ret) {
 		printf("FEC MXS: Unable to init FEC1\n");
 		return ret;
 	}
+#endif
 
 	dev = eth_get_dev_by_name("FEC0");
 	if (!dev) {
@@ -155,6 +157,7 @@ int board_eth_init(bd_t *bis)
 		return ret;
 	}
 
+#if 0
 	dev = eth_get_dev_by_name("FEC1");
 	if (!dev) {
 		printf("FEC MXS: Unable to get FEC1 device entry\n");
@@ -166,6 +169,7 @@ int board_eth_init(bd_t *bis)
 		printf("FEC MXS: Unable to register FEC1 mii postcall\n");
 		return ret;
 	}
+#endif
 
 	return ret;
 }

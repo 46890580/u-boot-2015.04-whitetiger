@@ -314,7 +314,6 @@
 		"fi;\0" \
 	"serverip=192.168.0.140\0"\
 	"ipaddr=192.168.0.126\0"\
-	"ethaddr=00:0c:29:d7:cd:3e\0"\
 	"netmask=255.255.255.0\0"\
 	"bootargs=noinitrd console=ttyAMA0,115200 ubi.mtd=1 root=ubi0:rootfs0 rootfstype=ubifs rw gpmi\0"\
 	"nandboot=nand read 0x42000000 0x400000 0x300000; bootm 0x42000000"

@@ -164,7 +164,7 @@ int eth_write_hwaddr(struct eth_device *dev, const char *base_name,
 	unsigned char env_enetaddr[6];
 	int ret = 0;
 
-	eth_getenv_enetaddr_by_index(base_name, eth_number, env_enetaddr);
+	/*eth_getenv_enetaddr_by_index(base_name, eth_number, env_enetaddr);
 
 	if (eth_address_set(env_enetaddr)) {
 		if (eth_address_set(dev->enetaddr) &&
@@ -178,11 +178,11 @@ int eth_write_hwaddr(struct eth_device *dev, const char *base_name,
 		}
 
 		memcpy(dev->enetaddr, env_enetaddr, 6);
-	} else if (is_valid_ether_addr(dev->enetaddr)) {
+	} else */if (is_valid_ether_addr(dev->enetaddr)) {
 		eth_setenv_enetaddr_by_index(base_name, eth_number,
 					     dev->enetaddr);
-		printf("\nWarning: %s using MAC address from net device\n",
-			dev->name);
+		/*printf("\nWarning: %s using MAC address from net device\n",
+			dev->name);*/
 	} else if (!(eth_address_set(dev->enetaddr))) {
 		printf("\nError: %s address not set.\n",
 		       dev->name);
