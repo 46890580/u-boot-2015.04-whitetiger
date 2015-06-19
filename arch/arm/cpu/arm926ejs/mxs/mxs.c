@@ -290,7 +290,7 @@ void imx_get_mac_from_fuse(int dev_id, unsigned char *mac)
 		return;
 	}
 
-	data = readl(&ocotp_regs->hw_ocotp_cust0 + 0x160);
+	data = readl(&ocotp_regs->hw_ocotp_ops3);
 
 	//mac[2] = (data >> 24) & 0xff;
 	mac[3] = (data >> 16) & 0xff;
