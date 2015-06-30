@@ -66,22 +66,23 @@ int dram_init(void)
 #ifdef	CONFIG_CMD_MMC
 static int m28_mmc_wp(int id)
 {
+	return 0;
 	if (id != 0) {
 		printf("MXS MMC: Invalid card selected (card id = %d)\n", id);
 		return 1;
 	}
 
-	return gpio_get_value(MX28_PAD_AUART2_CTS__GPIO_3_10);
+	/*return gpio_get_value(MX28_PAD_AUART2_CTS__GPIO_3_10);*/
 }
 
 int board_mmc_init(bd_t *bis)
 {
 	/* Configure WP as input. */
-	gpio_direction_input(MX28_PAD_AUART2_CTS__GPIO_3_10);
+	/*gpio_direction_input(MX28_PAD_AUART2_CTS__GPIO_3_10);*/
 	/* Turn on the power to the card. */
-	gpio_direction_output(MX28_PAD_PWM3__GPIO_3_28, 0);
+	/*gpio_direction_output(MX28_PAD_PWM3__GPIO_3_28, 0);*/
 
-	return mxsmmc_initialize(bis, 0, m28_mmc_wp, NULL);
+	return mxsmmc_initialize(bis, 1, m28_mmc_wp, NULL);
 }
 #endif
 

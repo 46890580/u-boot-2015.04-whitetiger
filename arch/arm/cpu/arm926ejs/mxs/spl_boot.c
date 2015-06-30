@@ -51,7 +51,7 @@ static const iomux_cfg_t iomux_boot[] = {
 	MX23_PAD_LCD_D05__GPIO_1_5 | MUX_CONFIG_BOOTMODE_PAD,
 #endif
 };
-extern void mxs_power_set_auto_restart(void);
+extern void mxs_power_set_auto_restart(int);
 #define DELAY_FOR_RESET 200000
 static void mxs_init_rtc_source(void)
 {
@@ -61,11 +61,11 @@ static void mxs_init_rtc_source(void)
     unsigned int secs;
     int is_reset = 0;
 
-    mxs_power_set_auto_restart();
+    mxs_power_set_auto_restart(0);
     persistent0 = readl(&rtc_regs->hw_rtc_persistent0);
     secs = readl(&rtc_regs->hw_rtc_seconds);
 
-    if (!(persistent0 & RTC_PERSISTENT0_CLOCKSOURCE)) {
+    /*if (!(persistent0 & RTC_PERSISTENT0_CLOCKSOURCE)) {
         printf("RTC:    ext 32.768k, set for the first time\r\n");
         clrsetbits_le32(&rtc_regs->hw_rtc_persistent0,
             RTC_PERSISTENT0_XTAL32_FREQ,
@@ -73,7 +73,7 @@ static void mxs_init_rtc_source(void)
         while (readl(&rtc_regs->hw_rtc_stat) & RTC_STAT_NEW_REGS_MASK);
     } else {
         printf("RTC:    ext 32.768k, set previously\r\n");
-    }
+    }*/
 
     persistent2 = readl(&rtc_regs->hw_rtc_persistent2);
     if (persistent2 & 1) {
@@ -85,15 +85,15 @@ static void mxs_init_rtc_source(void)
         clrbits_le32(&rtc_regs->hw_rtc_persistent2, 2);
         is_reset = 1;
     } else if (persistent0 & RTC_PERSISTENT0_EXTERNAL_RESET) {
-        printf("RESET:  reset pin");
+        printf("RESET:  reset pin\r\n");
         clrbits_le32(&rtc_regs->hw_rtc_persistent0, RTC_PERSISTENT0_EXTERNAL_RESET);
         is_reset = 1;
     } else if (persistent0 & RTC_PERSISTENT0_THERMAL_RESET) {
-        printf("RESET:  thermal reset");
+        printf("RESET:  thermal reset\r\n");
         clrbits_le32(&rtc_regs->hw_rtc_persistent0, RTC_PERSISTENT0_THERMAL_RESET);
         is_reset = 1;
     } else if (persistent0 & RTC_PERSISTENT0_AUTO_RESTART) {
-        printf("RESET:  auto restart");
+        printf("RESET:  auto restart\r\n");
         clrbits_le32(&rtc_regs->hw_rtc_persistent0, RTC_PERSISTENT0_AUTO_RESTART);
         is_reset = 1;
     } else {
@@ -184,12 +184,23 @@ void mxs_common_spl_init(const uint32_t arg, const uint32_t *resptr,
 	mxs_spl_fixup_vectors();
 
 	mxs_iomux_setup_multiple_pads(iomux_setup, iomux_size);
+
+	/* enable external power supply */
+	gpio_direction_output(MX28_PAD_ENET0_COL__GPIO_4_14, 1);
+	/* keep emmc reset high, not reset */
+	gpio_direction_output(MX28_PAD_GPMI_RESETN__GPIO_0_28, 1);
+
+	gpio_direction_output(MX28_PAD_PWM0__GPIO_3_16, 1);
+	gpio_direction_output(MX28_PAD_PWM1__GPIO_3_17, 1);
+	gpio_direction_output(MX28_PAD_I2C0_SCL__GPIO_3_24, 1);
+	gpio_direction_output(MX28_PAD_I2C0_SDA__GPIO_3_25, 1);
+	
 	mxs_spl_console_init();
 	debug("SPL: Serial Console Initialised\n");
 
     printf("\r\n[SPL]   begin...\r\n");
 
-#if 0
+#if 1
     /* if reset, then delay to let DCDC have time to restore, then we can detect battery properly */
     mxs_init_rtc_source();
 #else

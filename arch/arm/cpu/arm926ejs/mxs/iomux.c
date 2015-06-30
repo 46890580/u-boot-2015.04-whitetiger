@@ -80,6 +80,27 @@ int mxs_iomux_setup_pad(iomux_cfg_t pad)
 	return 0;
 }
 
+static void mxs_reinit_all_pins()
+{
+	u32 reg, ofs, bp, bm;
+	void *iomux_base = (void *)MXS_PINCTRL_BASE;
+	struct mxs_register_32 *mxs_reg;
+	int i;
+
+	reg = 0xffffffff;
+	ofs = MXS_PINCTRL_BASE + 0x100;
+	for (i = 0; i <=9; i++) {
+		writel(reg, ofs);
+		ofs += 0x10;
+	}
+
+	ofs = MXS_PINCTRL_BASE + 0xb08;
+	for (i = 0; i <= 4; i++) {
+		writel(reg, ofs);
+		ofs += 0x10;
+	}
+}
+
 int mxs_iomux_setup_multiple_pads(const iomux_cfg_t *pad_list, unsigned count)
 {
 	const iomux_cfg_t *p = pad_list;

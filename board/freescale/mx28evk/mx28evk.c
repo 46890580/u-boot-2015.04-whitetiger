@@ -49,10 +49,10 @@ int board_early_init_f(void)
 #endif
 
 	/* Power on LCD */
-	gpio_direction_output(MX28_PAD_LCD_RESET__GPIO_3_30, 1);
+	/* gpio_direction_output(MX28_PAD_LCD_RESET__GPIO_3_30, 1); */
 
 	/* Set contrast to maximum */
-	gpio_direction_output(MX28_PAD_PWM2__GPIO_3_18, 1);
+	/* gpio_direction_output(MX28_PAD_PWM2__GPIO_3_18, 1); */
 
 	return 0;
 }
@@ -73,6 +73,7 @@ int board_init(void)
 #ifdef	CONFIG_CMD_MMC
 static int mx28evk_mmc_wp(int id)
 {
+	return 0;
 	if (id != 0) {
 		printf("MXS MMC: Invalid card selected (card id = %d)\n", id);
 		return 1;
@@ -84,12 +85,12 @@ static int mx28evk_mmc_wp(int id)
 int board_mmc_init(bd_t *bis)
 {
 	/* Configure WP as input */
-	gpio_direction_input(MX28_PAD_SSP1_SCK__GPIO_2_12);
+	//gpio_direction_input(MX28_PAD_SSP1_SCK__GPIO_2_12);
 
 	/* Configure MMC0 Power Enable */
-	gpio_direction_output(MX28_PAD_PWM3__GPIO_3_28, 0);
+	//gpio_direction_output(MX28_PAD_PWM3__GPIO_3_28, 0);
 
-	return mxsmmc_initialize(bis, 0, mx28evk_mmc_wp, NULL);
+	return mxsmmc_initialize(bis, 1, mx28evk_mmc_wp, NULL);
 }
 #endif
 
@@ -111,11 +112,16 @@ int board_eth_init(bd_t *bis)
 	       &clkctrl_regs->hw_clkctrl_enet);
 
 	/* Power-on FECs */
-	gpio_direction_output(MX28_PAD_SSP1_DATA3__GPIO_2_15, 0);
+	//gpio_direction_output(MX28_PAD_SSP1_DATA3__GPIO_2_15, 0);
 
-	/* Reset FEC PHYs */
+	/* open phy power, low to enable */
+	gpio_direction_output(MX28_PAD_GPMI_ALE__GPIO_0_26, 1);
+	udelay(50);
+	gpio_direction_output(MX28_PAD_GPMI_ALE__GPIO_0_26, 0);
+
+	/* reset phy */
 	gpio_direction_output(MX28_PAD_ENET0_RX_CLK__GPIO_4_13, 0);
-	udelay(200);
+	udelay(300);
 	gpio_set_value(MX28_PAD_ENET0_RX_CLK__GPIO_4_13, 1);
 
 	ret = fecmxc_initialize_multi(bis, 0, 0, MXS_ENET0_BASE);
@@ -124,11 +130,11 @@ int board_eth_init(bd_t *bis)
 		return ret;
 	}
 
-	ret = fecmxc_initialize_multi(bis, 1, 3, MXS_ENET1_BASE);
+	/*ret = fecmxc_initialize_multi(bis, 1, 3, MXS_ENET1_BASE);
 	if (ret) {
 		puts("FEC MXS: Unable to init FEC1\n");
 		return ret;
-	}
+	}*/
 
 	dev = eth_get_dev_by_name("FEC0");
 	if (!dev) {
@@ -136,11 +142,11 @@ int board_eth_init(bd_t *bis)
 		return -EINVAL;
 	}
 
-	dev = eth_get_dev_by_name("FEC1");
+	/*dev = eth_get_dev_by_name("FEC1");
 	if (!dev) {
 		puts("FEC MXS: Unable to get FEC1 device entry\n");
 		return -EINVAL;
-	}
+	}*/
 
 	return ret;
 }

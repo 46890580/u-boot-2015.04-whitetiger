@@ -91,6 +91,116 @@ __weak void yellow_led_off(void) {}
 __weak void blue_led_on(void) {}
 __weak void blue_led_off(void) {}
 
+/******************** wang luheng: for print log in power_prep ********************/
+typedef union
+{
+    unsigned int  U;
+    struct
+    {
+        unsigned int DATA         :  8;
+        unsigned int FE           :  1;
+        unsigned int PE           :  1;
+        unsigned int BE           :  1;
+        unsigned int OE           :  1;
+        unsigned int RESERVED     :  4;
+        unsigned int UNAVAILABLE  : 16;
+    } B;
+} hw_uartdbgdr_t;
+typedef union
+{
+    unsigned int  U;
+    struct
+    {
+        unsigned int CTS          :  1;
+        unsigned int DSR          :  1;
+        unsigned int DCD          :  1;
+        unsigned int BUSY         :  1;
+        unsigned int RXFE         :  1;
+        unsigned int TXFF         :  1;
+        unsigned int RXFF         :  1;
+        unsigned int TXFE         :  1;
+        unsigned int RI           :  1;
+        unsigned int RESERVED     :  7;
+        unsigned int UNAVAILABLE  : 16;
+    } B;
+} hw_uartdbgfr_t;
+
+
+#define HW_UARTDBGDR_ADDR         (MXS_UARTDBG_BASE + 0x0)
+#define HW_UARTDBGDR           (*(volatile hw_uartdbgdr_t *) HW_UARTDBGDR_ADDR)
+#define HW_UARTDBGDR_RD()      (HW_UARTDBGDR.U)
+#define HW_UARTDBGDR_WR(v)     (HW_UARTDBGDR.U = (v))
+#define HW_UARTDBGDR_SET(v)    (HW_UARTDBGDR_WR(HW_UARTDBGDR_RD() |  (v)))
+#define HW_UARTDBGDR_CLR(v)    (HW_UARTDBGDR_WR(HW_UARTDBGDR_RD() & ~(v)))
+#define HW_UARTDBGDR_TOG(v)    (HW_UARTDBGDR_WR(HW_UARTDBGDR_RD() ^  (v)))
+
+#define HW_UARTDBGFR_ADDR         (MXS_UARTDBG_BASE + 0x18)
+#define HW_UARTDBGFR           (*(volatile hw_uartdbgfr_t *) HW_UARTDBGFR_ADDR)
+#define HW_UARTDBGFR_RD()      (HW_UARTDBGFR.U)
+
+#define BP_UARTDBGFR_TXFF      5
+#define BM_UARTDBGFR_TXFF      0x00000020
+
+static void wlh_putc(char ch)
+{
+	int loop = 0;
+	while (HW_UARTDBGFR_RD()&BM_UARTDBGFR_TXFF) {
+		loop++;
+		if (loop > 10000)
+			break;
+	};
+
+	/* if(!(HW_UARTDBGFR_RD() &BM_UARTDBGFR_TXFF)) */
+	HW_UARTDBGDR_WR(ch);
+}
+
+static void wlh_printhex(int data)
+{
+	int i = 0;
+	char c;
+	for (i = sizeof(int)*2-1; i >= 0; i--) {
+		c = data>>(i*4);
+		c &= 0xf;
+		if (c > 9)
+			wlh_putc(c-10+'A');
+		else
+			wlh_putc(c+'0');
+	}
+}
+
+void wlh_printf(char *fmt, ...)
+{
+	va_list args;
+	int one;
+	va_start(args, fmt);
+	while (*fmt) {
+
+		if (*fmt == '%') {
+			fmt++;
+			switch (*fmt) {
+
+			case 'x':
+			case 'X':
+				wlh_printhex(va_arg(args, int));
+				break;
+			case '%':
+				wlh_putc('%');
+				break;
+			default:
+				break;
+			}
+
+		} else {
+			wlh_putc(*fmt);
+		}
+		fmt++;
+	}
+	va_end(args);
+}
+
+
+/******************** wang luheng: for print log in power_prep ********************/
+
 /*
  * Why is gd allocated a register? Prior to reloc it might be better to
  * just pass it around to each function in this file?

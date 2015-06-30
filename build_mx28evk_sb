@@ -1,2 +1,6 @@
-make mx28evk_nand_config
+export CONFIG_USE_PRIVATE_LIBGCC=y
+make mx28evk_config
+#make mx28evk_nand_config
 make u-boot.sb
+mxsboot nand u-boot.sb u-boot.nand
+mxsboot sd u-boot.sb u-boot.sd

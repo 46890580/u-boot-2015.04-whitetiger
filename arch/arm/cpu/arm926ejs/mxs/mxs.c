@@ -20,6 +20,7 @@
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/sys_proto.h>
 #include <linux/compiler.h>
+#include <asm/gpio.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -56,6 +57,14 @@ void reset_cpu(ulong ignored)
 	struct mxs_power_regs *pwr_regs = (struct mxs_power_regs *)MXS_POWER_BASE;
 	struct mxs_clkctrl_regs *clkctrl_regs = (struct mxs_clkctrl_regs *)MXS_CLKCTRL_BASE;
     struct mxs_rtc_regs *rtc_regs = (struct mxs_rtc_regs *)MXS_RTC_BASE;
+
+	/* turn off external vcc_io_3v3 */
+	gpio_direction_output(MX28_PAD_ENET0_COL__GPIO_4_14, 0);
+	/* reset emmc */
+	gpio_direction_output(MX28_PAD_GPMI_RESETN__GPIO_0_28, 0);
+	udelay(5);
+	gpio_direction_output(MX28_PAD_GPMI_RESETN__GPIO_0_28, 1);
+	
 
     setbits_le32(&rtc_regs->hw_rtc_persistent2, 1);
     while (readl(&rtc_regs->hw_rtc_stat) & RTC_STAT_NEW_REGS_MASK);
@@ -290,7 +299,11 @@ void imx_get_mac_from_fuse(int dev_id, unsigned char *mac)
 		return;
 	}
 
-	data = readl(&ocotp_regs->hw_ocotp_ops3);
+	//data = readl(&ocotp_regs->hw_ocotp_ops3);
+	//printf("unique_key_ops3: 0x%x\n", data);
+
+	data = readl(&ocotp_regs->hw_ocotp_ops2);
+	//printf("unique_key_ops2: 0x%x\n", data);
 
 	//mac[2] = (data >> 24) & 0xff;
 	mac[3] = (data >> 16) & 0xff;

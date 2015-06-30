@@ -80,7 +80,7 @@ static void mxs_power_clock2pll(void)
  * bit to work around a design bug on MX28EVK Rev. A .
  */
 
-void mxs_power_set_auto_restart(void)
+void mxs_power_set_auto_restart(int flag)
 {
 	struct mxs_rtc_regs *rtc_regs =
 		(struct mxs_rtc_regs *)MXS_RTC_BASE;
@@ -95,23 +95,22 @@ void mxs_power_set_auto_restart(void)
 	while (readl(&rtc_regs->hw_rtc_ctrl) & RTC_CTRL_CLKGATE)
 		;
 
-/* wang luheng comment it out to be consistent with imx-bootlets */	/* Do nothing if flag already set */
-#if 0
-	if (readl(&rtc_regs->hw_rtc_persistent0) & RTC_PERSISTENT0_AUTO_RESTART)
-		return;
+	if (flag) {
+		if (readl(&rtc_regs->hw_rtc_persistent0) & RTC_PERSISTENT0_AUTO_RESTART)
+			return;
 
-	while (readl(&rtc_regs->hw_rtc_stat) & RTC_STAT_NEW_REGS_MASK)
-		;
+		while (readl(&rtc_regs->hw_rtc_stat) & RTC_STAT_NEW_REGS_MASK)
+			;
 
-	setbits_le32(&rtc_regs->hw_rtc_persistent0,
-			RTC_PERSISTENT0_AUTO_RESTART);
-	writel(RTC_CTRL_FORCE_UPDATE, &rtc_regs->hw_rtc_ctrl_set);
-	writel(RTC_CTRL_FORCE_UPDATE, &rtc_regs->hw_rtc_ctrl_clr);
-	while (readl(&rtc_regs->hw_rtc_stat) & RTC_STAT_NEW_REGS_MASK)
-		;
-	while (readl(&rtc_regs->hw_rtc_stat) & RTC_STAT_STALE_REGS_MASK)
-		;
-#endif
+		setbits_le32(&rtc_regs->hw_rtc_persistent0,
+				RTC_PERSISTENT0_AUTO_RESTART);
+		writel(RTC_CTRL_FORCE_UPDATE, &rtc_regs->hw_rtc_ctrl_set);
+		writel(RTC_CTRL_FORCE_UPDATE, &rtc_regs->hw_rtc_ctrl_clr);
+		while (readl(&rtc_regs->hw_rtc_stat) & RTC_STAT_NEW_REGS_MASK)
+			;
+		while (readl(&rtc_regs->hw_rtc_stat) & RTC_STAT_STALE_REGS_MASK)
+			;
+	}
 }
 
 /**
@@ -1222,7 +1221,7 @@ void mxs_power_init(void)
 	mxs_ungate_power();
 
 	mxs_power_clock2xtal();
-	mxs_power_set_auto_restart();
+	mxs_power_set_auto_restart(1);
 	mxs_power_set_linreg();
 	mxs_power_setup_5v_detect();
 
