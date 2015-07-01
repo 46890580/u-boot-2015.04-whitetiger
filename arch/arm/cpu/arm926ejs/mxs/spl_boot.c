@@ -185,16 +185,6 @@ void mxs_common_spl_init(const uint32_t arg, const uint32_t *resptr,
 
 	mxs_iomux_setup_multiple_pads(iomux_setup, iomux_size);
 
-	/* enable external power supply */
-	gpio_direction_output(MX28_PAD_ENET0_COL__GPIO_4_14, 1);
-	/* keep emmc reset high, not reset */
-	gpio_direction_output(MX28_PAD_GPMI_RESETN__GPIO_0_28, 1);
-
-	gpio_direction_output(MX28_PAD_PWM0__GPIO_3_16, 1);
-	gpio_direction_output(MX28_PAD_PWM1__GPIO_3_17, 1);
-	gpio_direction_output(MX28_PAD_I2C0_SCL__GPIO_3_24, 1);
-	gpio_direction_output(MX28_PAD_I2C0_SDA__GPIO_3_25, 1);
-	
 	mxs_spl_console_init();
 	debug("SPL: Serial Console Initialised\n");
 

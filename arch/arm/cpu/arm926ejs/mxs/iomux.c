@@ -82,23 +82,55 @@ int mxs_iomux_setup_pad(iomux_cfg_t pad)
 
 static void mxs_reinit_all_pins()
 {
-	u32 reg, ofs, bp, bm;
+	u32  ofs, doe_ofs, dout;
 	void *iomux_base = (void *)MXS_PINCTRL_BASE;
-	struct mxs_register_32 *mxs_reg;
-	int i;
 
-	reg = 0xffffffff;
-	ofs = MXS_PINCTRL_BASE + 0x100;
-	for (i = 0; i <=9; i++) {
-		writel(reg, ofs);
-		ofs += 0x10;
-	}
+	/* mux all pins as gpio */
+	ofs = MXS_PINCTRL_BASE + 0x100; writel(0x0000ffff, ofs);/* [BANK - 0]	MUX_00 : PIN_00 ~ 07, bit 16-31 16 bitsreserved */
+	ofs = MXS_PINCTRL_BASE + 0x110; writel(0x03ffffff, ofs);/* 			MUX_01 : PIN-16 ~ 28, bit 26-31 06 bits reserved */
+	ofs = MXS_PINCTRL_BASE + 0x120; writel(0xffffffff, ofs);/* [BANK - 1]	MUX_02 : PIN-00 ~ 15 */
+	ofs = MXS_PINCTRL_BASE + 0x130; writel(0xffffffff, ofs);/* 			MUX_03 : PIN-16 ~ 31 */
+	ofs = MXS_PINCTRL_BASE + 0x140; writel(0xff3fffff, ofs);/* [BANK - 2]	MUX_04 : PIN-00 ~ 15, bit 22-23 02 bits reserved */
+	ofs = MXS_PINCTRL_BASE + 0x150; writel(0x00ff0fff, ofs);/* 			MUX_05 : PIN-16 ~ 27, bit 24-31 08 bits, 12-15 04 bits reserved */
+	ofs = MXS_PINCTRL_BASE + 0x160; writel(0xffffffff, ofs);/* [BANK - 3]	MUX_06 : PIN-00 ~ 15 */
+	ofs = MXS_PINCTRL_BASE + 0x170; writel(0x3fffff3f, ofs);/* 			MUX_07 : PIN-16 ~ 30, bit 30-31 02 bits, 6-7, 02 bits reserved */
+	ofs = MXS_PINCTRL_BASE + 0x180; writel(0xffffffff, ofs);/* [BANK - 4]	MUX_08 : PIN-00 ~ 15 */
+	ofs = MXS_PINCTRL_BASE + 0x190; writel(0x00000303, ofs);/* 			MUX_09 : PIN-16 , 20 */
+	ofs = MXS_PINCTRL_BASE + 0x1a0; writel(0xffffffff, ofs);/* [BANK - 5]	MUX_10 : PIN-00 ~ 15 */
+	ofs = MXS_PINCTRL_BASE + 0x1b0; writel(0x0030ffff, ofs);/* 			MUX_11 : PIN-16 ~ 26, bit 16-19, 22-31, 14 bits reserved */
+	ofs = MXS_PINCTRL_BASE + 0x1c0; writel(0x3fffffff, ofs);/* [BANK - 6]	MUX_12 : PIN-00 ~ 14, bit 30-31, 2 bits reserved. all disabled */
+	ofs = MXS_PINCTRL_BASE + 0x1d0; writel(0x0003ffff, ofs);/* 			MUX_13 : PIN-16 ~ 24, bit 18-31, 14 bits reserved. all disabled */
+	/* set all output value as 0 */
+	dout = MXS_PINCTRL_BASE + 0x700; writel(0, dout);
+	dout = MXS_PINCTRL_BASE + 0x710; writel(0, dout);
+	dout = MXS_PINCTRL_BASE + 0x720; writel(0, dout);
+	dout = MXS_PINCTRL_BASE + 0x730; writel(0, dout);
+	dout = MXS_PINCTRL_BASE + 0x740; writel(0, dout);
 
-	ofs = MXS_PINCTRL_BASE + 0xb08;
-	for (i = 0; i <= 4; i++) {
-		writel(reg, ofs);
-		ofs += 0x10;
-	}
+#if 0
+	/* config all pins as input, except: i2c0-clk i2c0-data as output-level0 */
+	doe_ofs = MXS_PINCTRL_BASE + 0xb04; writel(0, doe_ofs); /* set */
+	doe_ofs = MXS_PINCTRL_BASE + 0xb10; writel(0, doe_ofs);
+	doe_ofs = MXS_PINCTRL_BASE + 0xb20; writel(0, doe_ofs);
+	doe_ofs = MXS_PINCTRL_BASE + 0xb30; writel(0x30000, doe_ofs);		/* 3_16, 3_17, i2c0-scl, i2c0-sda as output */
+	doe_ofs = MXS_PINCTRL_BASE + 0xb40; writel(0x4000, doe_ofs);			/* 4_14, ext pwr switch: output */
+#elif 1
+	/* config all pins as output */
+	doe_ofs = MXS_PINCTRL_BASE + 0xb04; writel(0x1fff00ff, doe_ofs); /* set */
+	doe_ofs = MXS_PINCTRL_BASE + 0xb04; writel(0x1fff00ff, doe_ofs); /* set */
+	doe_ofs = MXS_PINCTRL_BASE + 0xb10; writel(0xffffffff, doe_ofs);
+	doe_ofs = MXS_PINCTRL_BASE + 0xb20; writel(0x0fffffff, doe_ofs);
+	doe_ofs = MXS_PINCTRL_BASE + 0xb30; writel(0x7fffffff, doe_ofs);
+	doe_ofs = MXS_PINCTRL_BASE + 0xb40; writel(0x001fffff, doe_ofs);
+#elif 0
+	/* configure all pins as input */
+	doe_ofs = MXS_PINCTRL_BASE + 0xb00; writel(0x0, doe_ofs);
+	doe_ofs = MXS_PINCTRL_BASE + 0xb10; writel(0x0, doe_ofs);
+	doe_ofs = MXS_PINCTRL_BASE + 0xb20; writel(0x0, doe_ofs);
+	doe_ofs = MXS_PINCTRL_BASE + 0xb30; writel(0x0, doe_ofs);
+	doe_ofs = MXS_PINCTRL_BASE + 0xb40; writel(0x0, doe_ofs);
+#endif
+
 }
 
 int mxs_iomux_setup_multiple_pads(const iomux_cfg_t *pad_list, unsigned count)
@@ -107,12 +139,18 @@ int mxs_iomux_setup_multiple_pads(const iomux_cfg_t *pad_list, unsigned count)
 	int i;
 	int ret;
 
+	mxs_reinit_all_pins();										/* all pins output, level 0 */
+	udelay(10000);												/* just turned of vccio, wait for 10ms to let peripherals shutdown */
+	gpio_direction_output(MX28_PAD_ENET0_COL__GPIO_4_14, 1);		/* switch on vccio_3v3 */
+
 	for (i = 0; i < count; i++) {
 		ret = mxs_iomux_setup_pad(*p);
 		if (ret)
 			return ret;
 		p++;
 	}
+	gpio_direction_input(MX28_PAD_GPMI_CE0N__GPIO_0_16);		/* tca6416 INT pin, input, otherwise error while probing */
+	gpio_direction_output(MX28_PAD_GPMI_RESETN__GPIO_0_28, 1);	/* keep emmc reset high, not reset */
 
 	return 0;
 }
