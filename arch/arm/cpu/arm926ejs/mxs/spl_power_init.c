@@ -186,7 +186,7 @@ static int mxs_is_batt_good(void)
 	uint32_t volt = mxs_get_batt_volt();
 
 	if ((volt >= 2400) && (volt <= 4300)) {
-		debug("SPL: Battery is good\n");
+		printf("SPL: Battery is good %d\n", volt);
 		return 1;
 	}
 
@@ -209,12 +209,12 @@ static int mxs_is_batt_good(void)
 	volt = mxs_get_batt_volt();
 
 	if (volt >= 3500) {
-		debug("SPL: Battery Voltage too high\n");
+		printf("SPL: No battery, volt=%d\n", volt);
 		return 0;
 	}
 
 	if (volt >= 2400) {
-		debug("SPL: Battery is good\n");
+		printf("SPL: Battery has low voltage, volt=%d\n", volt);
 		return 1;
 	}
 
@@ -222,7 +222,7 @@ static int mxs_is_batt_good(void)
 		&power_regs->hw_power_charge_clr);
 	writel(POWER_CHARGE_PWD_BATTCHRG, &power_regs->hw_power_charge_set);
 
-	debug("SPL: Battery Voltage too low\n");
+	printf("SPL: Battery is damaged, volt=%d\n", volt);
 	return 0;
 }
 
@@ -720,7 +720,7 @@ static void mxs_batt_boot(void)
 		POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK,
 		0x8 << POWER_5VCTRL_CHARGE_4P2_ILIMIT_OFFSET);
 
-	mxs_power_enable_4p2();
+	//mxs_power_enable_4p2();
 }
 
 /**
@@ -867,11 +867,9 @@ static void mxs_switch_vddd_to_dcdc_source(void)
 static void mxs_power_configure_power_source(void)
 {
 	int batt_ready, batt_good;
-	struct mxs_power_regs *power_regs =
-		(struct mxs_power_regs *)MXS_POWER_BASE;
-	struct mxs_lradc_regs *lradc_regs =
-		(struct mxs_lradc_regs *)MXS_LRADC_BASE;
-    struct mxs_rtc_regs   *rtc_regs   = (struct mxs_rtc_regs   *)MXS_RTC_BASE;
+	struct mxs_power_regs *power_regs = (struct mxs_power_regs *)MXS_POWER_BASE;
+	struct mxs_lradc_regs *lradc_regs = (struct mxs_lradc_regs *)MXS_LRADC_BASE;
+	struct mxs_rtc_regs   *rtc_regs   = (struct mxs_rtc_regs   *)MXS_RTC_BASE;
 
 	debug("SPL: Configuring power source\n");
 
@@ -882,6 +880,7 @@ static void mxs_power_configure_power_source(void)
     batt_good = mxs_is_batt_good();
 
 	if (readl(&power_regs->hw_power_sts) & POWER_STS_VDD5V_GT_VDDIO) {
+		printf("boot from 5v\n");
 		batt_ready = mxs_is_batt_ready();
 
 /* wangluheng: comment out to always boot from 5v if 5v is available. */
@@ -904,6 +903,7 @@ static void mxs_power_configure_power_source(void)
 		}
 	} else {
 		/* 5V not detected, booting from battery. */
+		printf("boot from batt\n");
 		mxs_batt_boot();
 	}
 
