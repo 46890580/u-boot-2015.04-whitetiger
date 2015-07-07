@@ -15,6 +15,7 @@
 
 #include <asm/io.h>
 #include <dm/device-internal.h>
+#include <asm/arch/imx-regs.h>
 
 static struct spi_flash *flash;
 
@@ -554,6 +555,142 @@ usage:
 #define SF_TEST_HELP
 #endif
 
+void mxs_print_pwr_reg(void)
+{
+	struct mxs_power_regs *power_regs = (struct mxs_power_regs *)MXS_POWER_BASE;
+	unsigned int tmp;
+
+	tmp = readl(&power_regs->hw_power_ctrl);
+	printf("hw_power_ctrl = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_5vctrl);
+	printf("hw_power_5vctrl = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_minpwr);
+	printf("hw_power_minpwr = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_charge);
+	printf("hw_power_charge = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_vdddctrl);
+	printf("hw_power_vdddctrl = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_vddactrl);
+	printf("hw_power_vddactrl = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_vddioctrl);
+	printf("hw_power_vddioctrl = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_vddmemctrl);
+	printf("hw_power_vddmemctrl = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_dcdc4p2);
+	printf("hw_power_dcdc4p2 = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_misc);
+	printf("hw_power_misc = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_dclimits);
+	printf("hw_power_dclimits = 0x%08x\n", tmp);
+
+	tmp = readl(&power_regs->hw_power_loopctrl);
+	printf("hw_power_loopctrl = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_sts);
+	printf("hw_power_sts = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_speed);
+	printf("hw_power_speed = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_battmonitor);
+	printf("hw_power_battmonitor = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_reset);
+	printf("hw_power_reset = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_debug);
+	printf("hw_power_debug = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_thermal);
+	printf("hw_power_thermal = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_usb1ctrl);
+	printf("hw_power_usb1ctrl = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_special);
+	printf("hw_power_special = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_version);
+	printf("hw_power_version = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_anaclkctrl);
+	printf("hw_power_anaclkctrl = 0x%08x\n", tmp);
+	tmp = readl(&power_regs->hw_power_refctrl);
+	printf("hw_power_refctrl = 0x%08x\n", tmp);
+}
+
+static int do_printpwrreg(cmd_tbl_t *cmdtp, int flag, int argc,
+			char * const argv[])
+{
+	mxs_print_pwr_reg();
+	return 0;
+}
+
+static int do_clrregbit(cmd_tbl_t *cmdtp, int flag, int argc,
+			char * const argv[])
+{
+	int i;
+	unsigned int addr;
+	unsigned int value;
+	unsigned int origvalue;
+
+	if (argc != 3) {
+		printf("should have only 1 parameter!\n");
+		return 0;
+	}
+
+	addr = simple_strtoul(argv[1], NULL, 16);
+
+	value = simple_strtoul(argv[2], NULL, 16);
+
+	origvalue = readl(addr);
+	value = origvalue & (~value);
+
+	writel(value, addr);
+
+	printf("value of reg 0x%x is set to 0x%x\n", addr, value);
+	
+	return 0;
+}
+
+static int do_setregbit(cmd_tbl_t *cmdtp, int flag, int argc,
+			char * const argv[])
+{
+	int i;
+	unsigned int addr;
+	unsigned int value;
+	unsigned int origvalue;
+
+	if (argc != 3) {
+		printf("should have only 1 parameter!\n");
+		return 0;
+	}
+
+	addr = simple_strtoul(argv[1], NULL, 16);
+
+	value = simple_strtoul(argv[2], NULL, 16);
+
+	origvalue = readl(addr);
+	value = value | origvalue;
+
+	writel(value, addr);
+
+	printf("value of reg 0x%x is set to 0x%x\n", addr, value);
+	
+	return 0;
+}
+
+static int do_printreg(cmd_tbl_t *cmdtp, int flag, int argc,
+			char * const argv[])
+{
+	int i;
+	unsigned int addr;
+	unsigned int value;
+
+	if (argc != 2) {
+		printf("should have only 1 parameter!\n");
+		return 0;
+	}
+
+	addr = simple_strtoul(argv[1], NULL, 16);
+
+	value = readl(addr);
+
+	printf("value of reg 0x%x is 0x%x\n", addr, value);
+	
+	return 0;
+}
+
 U_BOOT_CMD(
 	sf,	5,	1,	do_spi_flash,
 	"SPI flash sub-system",
@@ -569,3 +706,26 @@ U_BOOT_CMD(
 	"				  at `addr' to flash at `offset'"
 	SF_TEST_HELP
 );
+
+U_BOOT_CMD(
+	printreg,	5,	1,	do_printreg,
+	"print regvalue",
+	"wang luheng\n"
+);
+U_BOOT_CMD(
+	setregbit,	5,	1,	do_setregbit,
+	"print regvalue",
+	"wang luheng\n"
+);
+U_BOOT_CMD(
+	clrregbit,	5,	1,	do_clrregbit,
+	"print regvalue",
+	"wang luheng\n"
+);
+
+U_BOOT_CMD(
+	printpwrreg,	5,	1,	do_printpwrreg,
+	"print regvalue",
+	"wang luheng\n"
+);
+

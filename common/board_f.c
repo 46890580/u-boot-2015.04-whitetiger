@@ -171,7 +171,6 @@ static void wlh_printhex(int data)
 void wlh_printf(char *fmt, ...)
 {
 	va_list args;
-	int one;
 	va_start(args, fmt);
 	while (*fmt) {
 

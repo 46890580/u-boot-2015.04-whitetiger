@@ -669,6 +669,206 @@ static void mxs_powerdown(void)
 		&power_regs->hw_power_reset);
 }
 
+static void wlh_mxs_batt_boot(void)
+{
+	struct mxs_power_regs *power_regs = (struct mxs_power_regs *)MXS_POWER_BASE;
+	uint32_t vdddctrl, vddactrl, vddioctrl;
+	uint32_t tmp/*, tmp2*/;
+
+
+	printf("SPL: Configuring power block to boot from battery\n");
+
+	/* 5v brown out does not power down device! */
+	clrbits_le32(&power_regs->hw_power_5vctrl, POWER_5VCTRL_PWDN_5VBRNOUT);
+
+	/* don't enable DCDC when 5v is present, why ??? */
+	clrbits_le32(&power_regs->hw_power_5vctrl, POWER_5VCTRL_ENABLE_DCDC);
+
+	/* don't enable 4p2-linreg(5v->4p2), don't enable DCDC to select 4p2-pin as source */
+	clrbits_le32(&power_regs->hw_power_dcdc4p2,
+		POWER_DCDC4P2_ENABLE_DCDC | POWER_DCDC4P2_ENABLE_4P2);
+
+	/* don't enable 100ohm on 4p2 output */
+	writel(POWER_CHARGE_ENABLE_LOAD, &power_regs->hw_power_charge_clr);
+
+	/* 5V to battery handoff. */
+	setbits_le32(&power_regs->hw_power_5vctrl, POWER_5VCTRL_DCDC_XFER);
+	early_delay(30);
+	clrbits_le32(&power_regs->hw_power_5vctrl, POWER_5VCTRL_DCDC_XFER);
+
+	/* don't enable 4p2BO interrupt */
+	writel(POWER_CTRL_ENIRQ_DCDC4P2_BO, &power_regs->hw_power_ctrl_clr);
+
+	/* enable double-fets ?? */
+	clrsetbits_le32(&power_regs->hw_power_minpwr, POWER_MINPWR_HALFFETS, POWER_MINPWR_DOUBLE_FETS);
+
+	/* set vddd/vdda/vddio linreg output 25mv lower than DCDC counterparts */
+	mxs_power_set_linreg();
+
+	/* don't disable vddd/vdda/vddio switching converter, don't enable vddd/vdda linreg */
+	clrbits_le32(&power_regs->hw_power_vdddctrl, POWER_VDDDCTRL_DISABLE_FET | POWER_VDDDCTRL_ENABLE_LINREG);
+	clrbits_le32(&power_regs->hw_power_vddactrl, POWER_VDDACTRL_DISABLE_FET | POWER_VDDACTRL_ENABLE_LINREG);
+	clrbits_le32(&power_regs->hw_power_vddioctrl,POWER_VDDIOCTRL_DISABLE_FET);
+
+	/* power down 5v->4p2(charger&4p2) circuit */
+	setbits_le32(&power_regs->hw_power_5vctrl, POWER_5VCTRL_PWD_CHARGE_4P2_MASK);
+
+	/* keep DCDC on even if 5v is plugged */
+	setbits_le32(&power_regs->hw_power_5vctrl, POWER_5VCTRL_ENABLE_DCDC);
+
+	/* limit (4p2 + charger) max current to 100mA */
+	clrsetbits_le32(&power_regs->hw_power_5vctrl, POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK, 0x8 << POWER_5VCTRL_CHARGE_4P2_ILIMIT_OFFSET);
+
+	debug("SPL: Powering up 4P2 regulator\n");
+	vdddctrl = readl(&power_regs->hw_power_vdddctrl);
+	vddactrl = readl(&power_regs->hw_power_vddactrl);
+	vddioctrl = readl(&power_regs->hw_power_vddioctrl);
+
+	/* disable DCDC->vddd/vdda/vddio, enable powerdown device if vddd/vdda/when vddio Brown Out occurs, enable vddd/vdda linreg */
+	setbits_le32(&power_regs->hw_power_vdddctrl, POWER_VDDDCTRL_DISABLE_FET  | POWER_VDDDCTRL_PWDN_BRNOUT | POWER_VDDDCTRL_ENABLE_LINREG);
+	setbits_le32(&power_regs->hw_power_vddactrl, POWER_VDDACTRL_DISABLE_FET  | POWER_VDDACTRL_PWDN_BRNOUT | POWER_VDDACTRL_ENABLE_LINREG);
+	setbits_le32(&power_regs->hw_power_vddioctrl, POWER_VDDIOCTRL_DISABLE_FET | POWER_VDDIOCTRL_PWDN_BRNOUT);
+
+	debug("Setup 4P2 parameters\n");
+	/* set 4p2 target as 4.2v, switch DCDC source to 4p2 if (4p2 > 1.05 * batt) */
+	clrsetbits_le32(&power_regs->hw_power_dcdc4p2, POWER_DCDC4P2_CMPTRIP_MASK | POWER_DCDC4P2_TRG_MASK,
+		POWER_DCDC4P2_TRG_4V2 | (31 << POWER_DCDC4P2_CMPTRIP_OFFSET));
+
+	/* adjustment to optimize charger&4p2 circuit at low 5v voltage. ???? */
+	clrsetbits_le32(&power_regs->hw_power_5vctrl, POWER_5VCTRL_HEADROOM_ADJ_MASK, 0x4 << POWER_5VCTRL_HEADROOM_ADJ_OFFSET);
+
+	/* if 4p2 linreg is lower than trg, then steel current from charger. switch DCDC source to 4p2 if 4p2 > batt by CMPTRIP /|\,  */
+	clrsetbits_le32(&power_regs->hw_power_dcdc4p2, POWER_DCDC4P2_DROPOUT_CTRL_MASK, DCDC4P2_DROPOUT_CONFIG);
+
+	/* limit the current consumed by charger&4p2 to 780mA(max) */
+	clrsetbits_le32(&power_regs->hw_power_5vctrl, POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK, 0x3f << POWER_5VCTRL_CHARGE_4P2_ILIMIT_OFFSET);
+
+	//mxs_power_init_4p2_regulator();
+	/* enable 5v->4p2 */
+	setbits_le32(&power_regs->hw_power_dcdc4p2, POWER_DCDC4P2_ENABLE_4P2);
+
+	/* enable 100ohm load on 4p2 output */
+	writel(POWER_CHARGE_ENABLE_LOAD, &power_regs->hw_power_charge_set);
+
+	/* limit the current consumed by charger&4p2 to 780mA(max), again??? */
+	writel(POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK, &power_regs->hw_power_5vctrl_clr);
+
+	/* set 4p2 target as 4.2v, again??? */
+	clrbits_le32(&power_regs->hw_power_dcdc4p2, POWER_DCDC4P2_TRG_MASK);
+
+	/* Power up the 4p2 rail and logic/control */
+	writel(POWER_5VCTRL_PWD_CHARGE_4P2_MASK, &power_regs->hw_power_5vctrl_clr);
+
+	/*
+	 * Start charging up the 4p2 capacitor. We ramp of this charge
+	 * gradually to avoid large inrush current from the 5V cable which can
+	 * cause transients/problems
+	 */
+	debug("SPL: Charging 4P2 capacitor\n");
+	mxs_enable_4p2_dcdc_input(0);
+
+	if (readl(&power_regs->hw_power_ctrl) & POWER_CTRL_VBUS_VALID_IRQ) {
+		/*
+		 * If we arrived here, we were unable to recover from mx23 chip
+		 * errata 5837. 4P2 is disabled and sufficient battery power is
+		 * not present. Exiting to not enable DCDC power during 5V
+		 * connected state.
+		 */
+		clrbits_le32(&power_regs->hw_power_dcdc4p2, POWER_DCDC4P2_ENABLE_DCDC);
+		writel(POWER_5VCTRL_PWD_CHARGE_4P2_MASK, &power_regs->hw_power_5vctrl_set);
+
+		printf("SPL: Unable to recover from mx23 errata 5837\n");
+		udelay(1000000);
+		hang();
+	}
+
+	/*
+	 * Here we set the 4p2 brownout level to something very close to 4.2V.
+	 * We then check the brownout status. If the brownout status is false,
+	 * the voltage is already close to the target voltage of 4.2V so we
+	 * can go ahead and set the 4P2 current limit to our max target limit.
+	 * If the brownout status is true, we need to ramp us the current limit
+	 * so that we don't cause large inrush current issues. We step up the
+	 * current limit until the brownout status is false or until we've
+	 * reached our maximum defined 4p2 current limit.
+	 */
+	debug("SPL: Setting 4P2 brownout level\n");
+
+	/* useless code, since we already set limit to max:780mA, \|/ */
+#if 0
+	clrsetbits_le32(&power_regs->hw_power_dcdc4p2,POWER_DCDC4P2_BO_MASK, 22 << POWER_DCDC4P2_BO_OFFSET);	/* 4.15V */
+	if (!(readl(&power_regs->hw_power_sts) & POWER_STS_DCDC_4P2_BO)) {
+		setbits_le32(&power_regs->hw_power_5vctrl, 0x3f << POWER_5VCTRL_CHARGE_4P2_ILIMIT_OFFSET);
+	} else {
+		tmp = (readl(&power_regs->hw_power_5vctrl) & POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK)
+			>>POWER_5VCTRL_CHARGE_4P2_ILIMIT_OFFSET;
+		while (tmp < 0x3f) {
+			if (!(readl(&power_regs->hw_power_sts) & POWER_STS_DCDC_4P2_BO)) {
+				tmp = readl(&power_regs->hw_power_5vctrl);
+				tmp |= POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK;
+				early_delay(100);
+				writel(tmp, &power_regs->hw_power_5vctrl);
+				break;
+			} else {
+				tmp++;
+				tmp2 = readl(&power_regs->hw_power_5vctrl);
+				tmp2 &= ~POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK;
+				tmp2 |= tmp << POWER_5VCTRL_CHARGE_4P2_ILIMIT_OFFSET;
+				writel(tmp2, &power_regs->hw_power_5vctrl);
+				early_delay(100);
+			}
+		}
+	}
+	clrbits_le32(&power_regs->hw_power_dcdc4p2, POWER_DCDC4P2_BO_MASK); /* restore 4p2 BO to 3.6v */
+	writel(POWER_CTRL_DCDC4P2_BO_IRQ, &power_regs->hw_power_ctrl_clr); /* clear 4p2 BO stat */
+#endif
+	/* end of useless code */
+
+
+	/* Shutdown battery (none present) */
+	if (!mxs_is_batt_ready()) {
+		clrbits_le32(&power_regs->hw_power_dcdc4p2, POWER_DCDC4P2_BO_MASK);	/* set 4p2 BO to 3.6v */
+		writel(POWER_CTRL_DCDC4P2_BO_IRQ, &power_regs->hw_power_ctrl_clr);	/* clear 4p2 BO stat */
+		writel(POWER_CTRL_ENIRQ_DCDC4P2_BO, &power_regs->hw_power_ctrl_clr);	/* clear 4p2 BO interrupt */
+	}
+
+	//beginning of mxs_power_init_dcdc_4p2_source();
+	if (!(readl(&power_regs->hw_power_dcdc4p2) & POWER_DCDC4P2_ENABLE_DCDC)) {
+		debug("SPL: Already switched - aborting\n");
+		hang();
+	}
+
+	mxs_enable_4p2_dcdc_input(1);
+
+	if (readl(&power_regs->hw_power_ctrl) & POWER_CTRL_VBUS_VALID_IRQ) {
+		clrbits_le32(&power_regs->hw_power_dcdc4p2, POWER_DCDC4P2_ENABLE_DCDC);
+		writel(POWER_5VCTRL_ENABLE_DCDC, &power_regs->hw_power_5vctrl_clr);
+		writel(POWER_5VCTRL_PWD_CHARGE_4P2_MASK, &power_regs->hw_power_5vctrl_set);
+	}
+	/* end of mxs_power_init_dcdc_4p2_source(); */
+
+
+	writel(vdddctrl, &power_regs->hw_power_vdddctrl);
+	early_delay(20);
+	writel(vddactrl, &power_regs->hw_power_vddactrl);
+	early_delay(20);
+	writel(vddioctrl, &power_regs->hw_power_vddioctrl);
+	clrsetbits_le32(&power_regs->hw_power_5vctrl, POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK, 0x3f << POWER_5VCTRL_CHARGE_4P2_ILIMIT_OFFSET);
+
+	/*
+	 * Check if FET is enabled on either powerout and if so,
+	 * disable load.
+	 */
+	tmp = 0;
+	tmp |= !(readl(&power_regs->hw_power_vdddctrl) & POWER_VDDDCTRL_DISABLE_FET);
+	tmp |= !(readl(&power_regs->hw_power_vddactrl) & POWER_VDDACTRL_DISABLE_FET);
+	tmp |= !(readl(&power_regs->hw_power_vddioctrl) & POWER_VDDIOCTRL_DISABLE_FET);
+	if (tmp)
+		writel(POWER_CHARGE_ENABLE_LOAD, &power_regs->hw_power_charge_clr);
+
+	debug("SPL: 4P2 regulator powered-up\n");
+}
+
 /**
  * mxs_batt_boot() - Configure the power block to boot from battery input
  *
@@ -679,6 +879,8 @@ static void mxs_batt_boot(void)
 {
 	struct mxs_power_regs *power_regs =
 		(struct mxs_power_regs *)MXS_POWER_BASE;
+	wlh_mxs_batt_boot();
+	return;
 
 	debug("SPL: Configuring power block to boot from battery\n");
 
@@ -866,7 +1068,7 @@ static void mxs_switch_vddd_to_dcdc_source(void)
  */
 static void mxs_power_configure_power_source(void)
 {
-	int batt_ready, batt_good;
+	int /*batt_ready, */batt_good;
 	struct mxs_power_regs *power_regs = (struct mxs_power_regs *)MXS_POWER_BASE;
 	struct mxs_lradc_regs *lradc_regs = (struct mxs_lradc_regs *)MXS_LRADC_BASE;
 	struct mxs_rtc_regs   *rtc_regs   = (struct mxs_rtc_regs   *)MXS_RTC_BASE;
@@ -881,7 +1083,7 @@ static void mxs_power_configure_power_source(void)
 
 	if (readl(&power_regs->hw_power_sts) & POWER_STS_VDD5V_GT_VDDIO) {
 		printf("boot from 5v\n");
-		batt_ready = mxs_is_batt_ready();
+		/*batt_ready = mxs_is_batt_ready();*/
 
 /* wangluheng: comment out to always boot from 5v if 5v is available. */
 #if 0
@@ -1244,7 +1446,7 @@ void mxs_power_init(void)
 		POWER_CTRL_VBUS_VALID_IRQ | POWER_CTRL_BATT_BO_IRQ |
 		POWER_CTRL_DCDC4P2_BO_IRQ, &power_regs->hw_power_ctrl_clr);
 
-	writel(POWER_5VCTRL_PWDN_5VBRNOUT, &power_regs->hw_power_5vctrl_set);
+	//writel(POWER_5VCTRL_PWDN_5VBRNOUT, &power_regs->hw_power_5vctrl_set);
 
 	early_delay(1000);
 }
