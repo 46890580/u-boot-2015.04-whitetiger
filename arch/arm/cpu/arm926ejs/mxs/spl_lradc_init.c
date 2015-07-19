@@ -28,6 +28,7 @@ void mxs_lradc_init(void)
 			LRADC_CTRL3_CYCLE_TIME_MASK,
 			LRADC_CTRL3_CYCLE_TIME_6MHZ);
 
+	/* virtual-7 mux to physical-7, battery; virtual-6 mux to physical-10, vddio */
 	clrsetbits_le32(&regs->hw_lradc_ctrl4,
 			LRADC_CTRL4_LRADC7SELECT_MASK |
 			LRADC_CTRL4_LRADC6SELECT_MASK,

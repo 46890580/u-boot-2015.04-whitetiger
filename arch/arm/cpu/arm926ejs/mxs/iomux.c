@@ -13,6 +13,7 @@
 #include <asm/arch/clock.h>
 #include <asm/arch/iomux.h>
 #include <asm/arch/imx-regs.h>
+#include <asm/gpio.h>
 
 #if	defined(CONFIG_MX23)
 #define	DRIVE_OFFSET	0x200
@@ -80,10 +81,10 @@ int mxs_iomux_setup_pad(iomux_cfg_t pad)
 	return 0;
 }
 
-static void mxs_reinit_all_pins()
+static void mxs_reinit_all_pins(void)
 {
 	u32  ofs, doe_ofs, dout;
-	void *iomux_base = (void *)MXS_PINCTRL_BASE;
+	/* void *iomux_base = (void *)MXS_PINCTRL_BASE; */
 
 	/* mux all pins as gpio */
 	ofs = MXS_PINCTRL_BASE + 0x100; writel(0x0000ffff, ofs);/* [BANK - 0]	MUX_00 : PIN_00 ~ 07, bit 16-31 16 bitsreserved */
