@@ -1436,7 +1436,7 @@ void mxs_power_init(void)
 	mxs_power_set_vddx(&mxs_vddio_cfg, 3300, 3150);
 
 	debug("SPL: Setting VDDD to 1V5 (brownout @ 1v0)\n");
-	mxs_power_set_vddx(&mxs_vddd_cfg, 1500, 1000);
+	mxs_power_set_vddx(&mxs_vddd_cfg, 1550, 1000);
 #ifdef CONFIG_MX23
 	debug("SPL: Setting mx23 VDDMEM to 2V5 (brownout @ 1v7)\n");
 	mxs_power_set_vddx(&mxs_vddmem_cfg, 2500, 1700);
