@@ -16,6 +16,8 @@
 
 #include "mxs_init.h"
 
+#define WHITETIGER_LOW_SPEED
+
 static uint32_t dram_vals[] = {
 /*
  * i.MX28 DDR2 at 200MHz
@@ -138,7 +140,15 @@ static void initialize_dram_values(void)
 	writel((1 << 24), MXS_DRAM_BASE + (4 * 8));
 }
 #endif
-
+/*
+ *
+	     cpu     ahb     emi ss     vddd   vdddBO     cur    vddio     vdda   xbus falg
+	{ 454736, 151570, 205710, 0, 1550000, 1450000, 355000, 3300000, 1800000, 24000, 0 },
+	{ 360000, 120000, 130910, 0, 1350000, 1250000, 200000, 3300000, 1800000, 24000, 0 },
+	{ 261818, 130910, 130910, 0, 1350000, 1250000, 173000, 3300000, 1800000, 24000, 0 },
+	{  64000,  64000, 240000, 3, 1350000, 1250000, 150000, 3300000, 1800000, 24000, 0 },
+	{  0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0 },
+ */
 static void mxs_mem_init_clock(void)
 {
 	struct mxs_clkctrl_regs *clkctrl_regs =
@@ -147,8 +157,13 @@ static void mxs_mem_init_clock(void)
 	/* Fractional divider for ref_emi is 33 ; 480 * 18 / 33 = 266MHz */
 	const unsigned char divider = 33;
 #elif defined(CONFIG_MX28)
+#ifdef WHITETIGER_LOW_SPEED
+	/* Fractional divider for ref_emi is 24 ; 480 * 18 / 22 = 392.73MHz, /3=130.91MHz, EMI */
+	const unsigned char divider = 22;
+#else
 	/* Fractional divider for ref_emi is 21 ; 480 * 18 / 21 = 411MHz */
 	const unsigned char divider = 21;
+#endif
 #endif
 
 	debug("SPL: Initialising FRAC0\n");
@@ -167,12 +182,19 @@ static void mxs_mem_init_clock(void)
 
 	early_delay(11000);
 
+#ifdef WHITETIGER_LOW_SPEED
+	/* Set EMI clock divider for EMI clock to 392.73 / 3 = 130.91MHz */
+	writel((3 << CLKCTRL_EMI_DIV_EMI_OFFSET) |
+		(1 << CLKCTRL_EMI_DIV_XTAL_OFFSET),
+		&clkctrl_regs->hw_clkctrl_emi);
+#else
 	/* Set EMI clock divider for EMI clock to 411 / 2 = 205MHz */
 	writel((2 << CLKCTRL_EMI_DIV_EMI_OFFSET) |
 		(1 << CLKCTRL_EMI_DIV_XTAL_OFFSET),
 		&clkctrl_regs->hw_clkctrl_emi);
+#endif
 
-	/* Unbypass EMI */
+	/* Unbypass EMI, use ref-emi, not ref-xtal */
 	writel(CLKCTRL_CLKSEQ_BYPASS_EMI,
 		&clkctrl_regs->hw_clkctrl_clkseq_clr);
 
@@ -187,19 +209,28 @@ static void mxs_mem_setup_cpu_and_hbus(void)
 
 	debug("SPL: Setting CPU and HBUS clock frequencies\n");
 
-	/* Set fractional divider for ref_cpu to 480 * 18 / 19 = 454MHz
-	 * and ungate CPU clock */
-	writeb(19 & CLKCTRL_FRAC_FRAC_MASK,
-		(uint8_t *)&clkctrl_regs->hw_clkctrl_frac0[CLKCTRL_FRAC0_CPU]);
+#ifdef WHITETIGER_LOW_SPEED
+	/* Set fractional divider for ref_cpu to 480 * 18 / 24 = 360MHz */
+	writeb(24 & CLKCTRL_FRAC_FRAC_MASK, (uint8_t *)&clkctrl_regs->hw_clkctrl_frac0[CLKCTRL_FRAC0_CPU]);
+#else
+	/* Set fractional divider for ref_cpu to 480 * 18 / 19 = 454MHz */
+	writeb(19 & CLKCTRL_FRAC_FRAC_MASK, (uint8_t *)&clkctrl_regs->hw_clkctrl_frac0[CLKCTRL_FRAC0_CPU]);
+#endif
 
 	/* Set CPU bypass */
 	writel(CLKCTRL_CLKSEQ_BYPASS_CPU,
 		&clkctrl_regs->hw_clkctrl_clkseq_set);
 
-	/* HBUS = 151MHz */
 	writel(CLKCTRL_HBUS_DIV_MASK, &clkctrl_regs->hw_clkctrl_hbus_set);
+#ifdef WHITETIGER_LOW_SPEED
+	/* HBUS = 113.25MHz */
+	writel(((~4) << CLKCTRL_HBUS_DIV_OFFSET) & CLKCTRL_HBUS_DIV_MASK,
+		&clkctrl_regs->hw_clkctrl_hbus_clr);
+#else
+	/* HBUS = 151MHz */
 	writel(((~3) << CLKCTRL_HBUS_DIV_OFFSET) & CLKCTRL_HBUS_DIV_MASK,
 		&clkctrl_regs->hw_clkctrl_hbus_clr);
+#endif
 
 	early_delay(10000);
 
