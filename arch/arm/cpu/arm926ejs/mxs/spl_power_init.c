@@ -298,12 +298,23 @@ static void mxs_power_init_4p2_params(void)
 	struct mxs_power_regs *power_regs =
 		(struct mxs_power_regs *)MXS_POWER_BASE;
 
+	int batvol;
+	uint32_t cmptrip;
+
+	batvol = mxs_get_batt_volt();
+	if (batvol >= 4000)
+		cmptrip = 1;          /* 4p2 >= 0.85*bat */
+	else if (batvol >= 3800)
+		cmptrip = 0x18;       /* 4p2 >= 1.00*bat */
+	else
+		cmptrip = 0x1f;       /* 4p2 >= 1.05*bat */
+
 	debug("SPL: Configuring common 4P2 regulator params\n");
 
 	/* Setup 4P2 parameters */
 	clrsetbits_le32(&power_regs->hw_power_dcdc4p2,
 		POWER_DCDC4P2_CMPTRIP_MASK | POWER_DCDC4P2_TRG_MASK,
-		POWER_DCDC4P2_TRG_4V2 | (31 << POWER_DCDC4P2_CMPTRIP_OFFSET));
+		POWER_DCDC4P2_TRG_4V2 | cmptrip);
 
 	clrsetbits_le32(&power_regs->hw_power_5vctrl,
 		POWER_5VCTRL_HEADROOM_ADJ_MASK,
@@ -705,7 +716,7 @@ static void wlh_mxs_batt_boot(void)
 	/* set vddd/vdda/vddio linreg output 25mv lower than DCDC counterparts */
 	mxs_power_set_linreg();
 
-	/* don't disable vddd/vdda/vddio switching converter, don't enable vddd/vdda linreg */
+	/* don't disable vddd/vdda/vddio switching converter, don't enable vddd/vdda linreg, i.e. use DCDC to generate them */
 	clrbits_le32(&power_regs->hw_power_vdddctrl, POWER_VDDDCTRL_DISABLE_FET | POWER_VDDDCTRL_ENABLE_LINREG);
 	clrbits_le32(&power_regs->hw_power_vddactrl, POWER_VDDACTRL_DISABLE_FET | POWER_VDDACTRL_ENABLE_LINREG);
 	clrbits_le32(&power_regs->hw_power_vddioctrl,POWER_VDDIOCTRL_DISABLE_FET);
@@ -741,23 +752,23 @@ static void wlh_mxs_batt_boot(void)
 	clrsetbits_le32(&power_regs->hw_power_dcdc4p2, POWER_DCDC4P2_DROPOUT_CTRL_MASK, DCDC4P2_DROPOUT_CONFIG);
 
 	/* limit the current consumed by charger&4p2 to 780mA(max) */
-	clrsetbits_le32(&power_regs->hw_power_5vctrl, POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK, 0x3f << POWER_5VCTRL_CHARGE_4P2_ILIMIT_OFFSET);
+	//clrsetbits_le32(&power_regs->hw_power_5vctrl, POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK, 0x3f << POWER_5VCTRL_CHARGE_4P2_ILIMIT_OFFSET);
 
 	//mxs_power_init_4p2_regulator();
 	/* enable 5v->4p2 */
-	setbits_le32(&power_regs->hw_power_dcdc4p2, POWER_DCDC4P2_ENABLE_4P2);
+	//setbits_le32(&power_regs->hw_power_dcdc4p2, POWER_DCDC4P2_ENABLE_4P2);
 
 	/* enable 100ohm load on 4p2 output */
 	writel(POWER_CHARGE_ENABLE_LOAD, &power_regs->hw_power_charge_set);
 
-	/* limit the current consumed by charger&4p2 to 780mA(max), again??? */
+	/* limit the current consumed by charger&4p2 to 0 */
 	writel(POWER_5VCTRL_CHARGE_4P2_ILIMIT_MASK, &power_regs->hw_power_5vctrl_clr);
 
 	/* set 4p2 target as 4.2v, again??? */
-	clrbits_le32(&power_regs->hw_power_dcdc4p2, POWER_DCDC4P2_TRG_MASK);
+	//clrbits_le32(&power_regs->hw_power_dcdc4p2, POWER_DCDC4P2_TRG_MASK);
 
 	/* Power up the 4p2 rail and logic/control */
-	writel(POWER_5VCTRL_PWD_CHARGE_4P2_MASK, &power_regs->hw_power_5vctrl_clr);
+	//writel(POWER_5VCTRL_PWD_CHARGE_4P2_MASK, &power_regs->hw_power_5vctrl_clr);
 
 	/*
 	 * Start charging up the 4p2 capacitor. We ramp of this charge
