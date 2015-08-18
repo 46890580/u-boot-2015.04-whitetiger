@@ -16,7 +16,7 @@
 
 #include "mxs_init.h"
 
-#define WHITETIGER_LOW_SPEED
+//#define WHITETIGER_LOW_SPEED
 
 static uint32_t dram_vals[] = {
 /*

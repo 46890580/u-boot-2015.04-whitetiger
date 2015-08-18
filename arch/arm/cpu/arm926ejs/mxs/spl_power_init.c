@@ -1444,7 +1444,7 @@ void mxs_power_init(void)
 	mxs_enable_output_rail_protection();
 
 	debug("SPL: Setting VDDIO to 3V3 (brownout @ 3v15)\n");
-	mxs_power_set_vddx(&mxs_vddio_cfg, 3300, 3150);
+	mxs_power_set_vddx(&mxs_vddio_cfg, 3300, 3000);
 
 	debug("SPL: Setting VDDD to 1V5 (brownout @ 1v0)\n");
 	mxs_power_set_vddx(&mxs_vddd_cfg, 1550, 1400);
