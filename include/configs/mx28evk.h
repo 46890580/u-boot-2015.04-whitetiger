@@ -160,7 +160,7 @@
 #endif
 
 /* Boot Linux */
-#define CONFIG_BOOTDELAY	5
+#define CONFIG_BOOTDELAY	3
 #define CONFIG_BOOTFILE		"uImage"
 #define CONFIG_LOADADDR		0x42000000
 #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
@@ -168,29 +168,29 @@
 /* Extra Environment */
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"script=boot.scr\0"	\
-	"image=zImage\0" \
-	"console_fsl=ttyAM0\0" \
-	"console_mainline=ttyAMA0\0" \
-	"fdt_file=imx28-evk.dtb\0" \
-	"fdt_addr=0x41000000\0" \
 	"boot_fdt=try\0" \
 	"ip_dyn=yes\0" \
-	"mmcdev=0\0" \
-	"mmcpart=2\0" \
-	"mmcroot=/dev/mmcblk0p3 rw rootwait\0" \
-	"mmcargs=setenv bootargs console=${console_mainline},${baudrate} " \
-		"root=${mmcroot}\0" \
-	"loadbootscript="  \
-		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
 	"bootscript=echo Running bootscript from mmc ...; "	\
 		"source\0" \
-	"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
-	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
-	"serverip=192.168.0.199\0"\
+	"update_uboot=mw 0x42000000 0 0x200000; tftp 0x42000000 u-boot.sd; " \
+		"mmc erase 0x800 0x1000; mmc write 0x42000000 0x800 0x1000\0" \
+	"update_kernel=mw 0x42000000 0 0x400000; tftp 0x42000000 uImage; " \
+		"mmc erase 0x1800 0x2000; mmc write 0x42000000 0x1800 0x2000\0" \
+	"update_dtb=mw 0x42000000 0 0x100000; tftp 0x42000000 imx28-whitetiger.dtb; " \
+		"mmc erase 0x3800 0x800; mmc write 0x42000000 0x3800 0x800\0" \
+	"erase_filesystem=mmc erase 0x4800 0x71B800\0" \
+	"erase_all=mmc erase 0 0x720000\0" \
+	"serverip=192.168.0.127\0"\
 	"ipaddr=192.168.0.126\0"\
 	"netmask=255.255.255.0\0"\
-	"bootargs=console=ttyAMA0,115200,8n1  rootfstype=ext3 root=/dev/mmcblk0p3 rw rootwait\0"\
-	"emmcboot=mmc read 0x42000000 0x1800 0x2000; mmc read 0x42800000 0x3800 0x800; bootm 0x42000000 - 0x42800000"
+	"bootargs=console=ttyAMA0,115200,8n1  rootfstype=ext3 root=/dev/mmcblk0p4 rw rootwait\0"\
+	"emmcboot=mmc read 0x42000000 0x1800 0x2000; mmc read 0x42800000 0x3800 0x800; bootm 0x42000000 - 0x42800000\0" \
+	"netbootargs=setenv bootargs console=ttyAMA0,115200,8n1 root=/dev/nfs rw ip=${ipaddr} " \
+		"nfsroot=${serverip}:/nfsroot fec_mac=00:04:9f:99:66:df\0" \
+	"factoryboot=${erase_all}; run netbootargs; tftp 0x42000000 uImage; " \
+		"tftp 0x42800000 imx28-whitetiger.dtb; bootm 0x42000000 - 0x42800000 \0" \
+	"netboot=run netbootargs; tftp 0x42000000 uImage; " \
+		"tftp 0x42800000 imx28-whitetiger.dtb; bootm 0x42000000 - 0x42800000 \0"
 
 
 #define CONFIG_BOOTCOMMAND \
