@@ -60,7 +60,7 @@
 
 /* Environment is in MMC */
 #if defined(CONFIG_CMD_MMC) && defined(CONFIG_ENV_IS_IN_MMC)
-#define CONFIG_ENV_OFFSET		(256 * 1024)
+#define CONFIG_ENV_OFFSET		(512 * 1024)
 #define CONFIG_SYS_MMC_ENV_DEV		0
 #endif
 
@@ -172,14 +172,15 @@
 	"ip_dyn=yes\0" \
 	"bootscript=echo Running bootscript from mmc ...; "	\
 		"source\0" \
+	"erase_filesystem=mmc erase 0x4800 0x71B800\0" \
+	"erase_ubtenv=mmc erase 0x400 0x400\0" \
+	"erase_all=mmc erase 0 0x720000\0" \
 	"update_uboot=mw 0x42000000 0 0x200000; tftp 0x42000000 u-boot.sd; " \
 		"mmc erase 0x800 0x1000; mmc write 0x42000000 0x800 0x1000\0" \
 	"update_kernel=mw 0x42000000 0 0x400000; tftp 0x42000000 uImage; " \
 		"mmc erase 0x1800 0x2000; mmc write 0x42000000 0x1800 0x2000\0" \
 	"update_dtb=mw 0x42000000 0 0x100000; tftp 0x42000000 imx28-whitetiger.dtb; " \
 		"mmc erase 0x3800 0x800; mmc write 0x42000000 0x3800 0x800\0" \
-	"erase_filesystem=mmc erase 0x4800 0x71B800\0" \
-	"erase_all=mmc erase 0 0x720000\0" \
 	"serverip=192.168.0.127\0"\
 	"ipaddr=192.168.0.126\0"\
 	"netmask=255.255.255.0\0"\
