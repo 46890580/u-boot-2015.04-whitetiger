@@ -103,7 +103,7 @@ static void mxs_reinit_all_pins(void)
 	ofs = MXS_PINCTRL_BASE + 0x1d0; writel(0x0003ffff, ofs);/* 			MUX_13 : PIN-16 ~ 24, bit 18-31, 14 bits reserved. all disabled */
 	/* set all output value as 0 */
 	dout = MXS_PINCTRL_BASE + 0x700; writel(0, dout);
-	dout = MXS_PINCTRL_BASE + 0x710; writel(0, dout);
+	dout = MXS_PINCTRL_BASE + 0x710; writel(0x00800000, dout); /* gpio_1_23 high, disable WD */
 	dout = MXS_PINCTRL_BASE + 0x720; writel(0, dout);
 	dout = MXS_PINCTRL_BASE + 0x730; writel(0, dout);
 	dout = MXS_PINCTRL_BASE + 0x740; writel(0, dout);
@@ -117,9 +117,9 @@ static void mxs_reinit_all_pins(void)
 	doe_ofs = MXS_PINCTRL_BASE + 0xb40; writel(0x4000, doe_ofs);			/* 4_14, ext pwr switch: output */
 #elif 1
 	/* config all pins as output */
+	/*doe_ofs = MXS_PINCTRL_BASE + 0xb04; writel(0x1fff00ff, doe_ofs);*/ /* set */
 	doe_ofs = MXS_PINCTRL_BASE + 0xb04; writel(0x1fff00ff, doe_ofs); /* set */
-	doe_ofs = MXS_PINCTRL_BASE + 0xb04; writel(0x1fff00ff, doe_ofs); /* set */
-	doe_ofs = MXS_PINCTRL_BASE + 0xb10; writel(0xffffffff, doe_ofs);
+	doe_ofs = MXS_PINCTRL_BASE + 0xb10; writel(0xff7fffff, doe_ofs); /* gpio_1_23 input, disable WD */
 	doe_ofs = MXS_PINCTRL_BASE + 0xb20; writel(0x0fffffff, doe_ofs);
 	doe_ofs = MXS_PINCTRL_BASE + 0xb30; writel(0x7fffffff, doe_ofs);
 	doe_ofs = MXS_PINCTRL_BASE + 0xb40; writel(0x001fffff, doe_ofs);
