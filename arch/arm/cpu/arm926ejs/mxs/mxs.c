@@ -81,7 +81,22 @@ void reset_cpu(ulong ignored)
 int do_powerdown(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
  	struct mxs_power_regs *pwr_regs = (struct mxs_power_regs *)MXS_POWER_BASE;
+	struct mxs_rtc_regs   *rtc_regs = (struct mxs_rtc_regs   *)MXS_RTC_BASE;
 
+	/* don't auto start on shutdown */
+	writel(RTC_PERSISTENT0_AUTO_RESTART, &rtc_regs->hw_rtc_persistent0_clr);
+	/* shutdown FEC_3V3 */
+	gpio_direction_output(MX28_PAD_GPMI_ALE__GPIO_0_26, 1);
+	/* shutdown USB0/1_PWR_EN */
+	gpio_direction_output(MX28_PAD_ENET0_TXD2__GPIO_4_11, 0);
+	gpio_direction_output(MX28_PAD_ENET0_TXD3__GPIO_4_12, 0);
+	/* shutdown vbat_gsm */
+	gpio_direction_output(MX28_PAD_PWM3__GPIO_3_28, 0);
+	mdelay(100);
+	/* shutdown vccio_3v3 */
+	gpio_direction_output(MX28_PAD_ENET0_COL__GPIO_4_14, 0);
+	mdelay(100);
+	/* power down chip */
     writel(POWER_RESET_UNLOCK_KEY | 1, &pwr_regs->hw_power_reset);
 
     return 0;
@@ -96,6 +111,22 @@ void enable_caches(void)
 	dcache_enable();
 #endif
 }
+
+void check_power_mode(void)
+{
+	uint32_t pwr_state;
+	struct mxs_power_regs *pwr_regs = (struct mxs_power_regs *)MXS_POWER_BASE;
+
+	pwr_state = readl(&pwr_regs->hw_power_sts);
+	if (0 == (pwr_state & POWER_STS_VDD5V_GT_VDDIO)) {
+		if (0 == strcmp("only5v", getenv("power_mode"))) {
+			printf("shut down due to only5v power_mode\r\n");
+			do_powerdown(0, 0, 0, 0);
+		}
+	}
+}
+
+
 
 /*
  * This function will craft a jumptable at 0x0 which will redirect interrupt

@@ -101,11 +101,14 @@ static void mxs_reinit_all_pins(void)
 	ofs = MXS_PINCTRL_BASE + 0x1b0; writel(0x0030ffff, ofs);/* 			MUX_11 : PIN-16 ~ 26, bit 16-19, 22-31, 14 bits reserved */
 	ofs = MXS_PINCTRL_BASE + 0x1c0; writel(0x3fffffff, ofs);/* [BANK - 6]	MUX_12 : PIN-00 ~ 14, bit 30-31, 2 bits reserved. all disabled */
 	ofs = MXS_PINCTRL_BASE + 0x1d0; writel(0x0003ffff, ofs);/* 			MUX_13 : PIN-16 ~ 24, bit 18-31, 14 bits reserved. all disabled */
-	/* set all output value as 0 */
+	/* set all output value as 0, except:
+	 *     gpio_1_23, high: enable watch dog
+	 *     gpio_3_23, high: turn on vbat_gsm
+	 */
 	dout = MXS_PINCTRL_BASE + 0x700; writel(0, dout);
-	dout = MXS_PINCTRL_BASE + 0x710; writel(0x00800000, dout); /* gpio_1_23 high, disable WD */
+	dout = MXS_PINCTRL_BASE + 0x710; writel(0x00800000, dout);
 	dout = MXS_PINCTRL_BASE + 0x720; writel(0, dout);
-	dout = MXS_PINCTRL_BASE + 0x730; writel(0, dout);
+	dout = MXS_PINCTRL_BASE + 0x730; writel(0x10000000, dout);
 	dout = MXS_PINCTRL_BASE + 0x740; writel(0, dout);
 
 #if 0
@@ -142,7 +145,7 @@ int mxs_iomux_setup_multiple_pads(const iomux_cfg_t *pad_list, unsigned count)
 
 	mxs_reinit_all_pins();										/* all pins output, level 0 */
 	udelay(10000);												/* just turned of vccio, wait for 10ms to let peripherals shutdown */
-	gpio_direction_output(MX28_PAD_ENET0_COL__GPIO_4_14, 1);		/* switch on vccio_3v3 */
+	gpio_direction_output(MX28_PAD_ENET0_COL__GPIO_4_14, 1);    /* switch on vccio_3v3 */
 
 	for (i = 0; i < count; i++) {
 		ret = mxs_iomux_setup_pad(*p);

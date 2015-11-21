@@ -281,6 +281,7 @@ const char *bootdelay_process(void)
 	return s;
 }
 
+extern void check_power_mode(void);
 void autoboot_command(const char *s)
 {
 	debug("### main_loop: bootcmd=\"%s\"\n", s ? s : "<UNDEFINED>");
@@ -290,6 +291,7 @@ void autoboot_command(const char *s)
 		int prev = disable_ctrlc(1);	/* disable Control C checking */
 #endif
 
+		check_power_mode();
 		run_command_list(s, -1, 0);
 
 #if defined(CONFIG_AUTOBOOT_KEYED) && !defined(CONFIG_AUTOBOOT_KEYED_CTRLC)

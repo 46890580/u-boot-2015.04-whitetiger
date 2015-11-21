@@ -170,17 +170,24 @@
 	"script=boot.scr\0"	\
 	"boot_fdt=try\0" \
 	"ip_dyn=yes\0" \
+	"power_mode=only5v\0" \
 	"bootscript=echo Running bootscript from mmc ...; "	\
 		"source\0" \
 	"erase_filesystem=mmc erase 0x4800 0x71B800\0" \
 	"erase_ubtenv=mmc erase 0x400 0x400\0" \
 	"erase_all=mmc erase 0 0x720000\0" \
-	"update_uboot=mw 0x42000000 0 0x200000; tftp 0x42000000 u-boot.sd; " \
-		"mmc erase 0x800 0x1000; mmc write 0x42000000 0x800 0x1000\0" \
-	"update_kernel=mw 0x42000000 0 0x400000; tftp 0x42000000 uImage; " \
-		"mmc erase 0x1800 0x2000; mmc write 0x42000000 0x1800 0x2000\0" \
-	"update_dtb=mw 0x42000000 0 0x100000; tftp 0x42000000 imx28-whitetiger.dtb; " \
-		"mmc erase 0x3800 0x800; mmc write 0x42000000 0x3800 0x800\0" \
+	"update_uboot=mw 0x42000000 0 0x200000; "\
+		"if tftp 0x42000000 u-boot.sd; then " \
+			"mmc erase 0x800 0x1000; mmc write 0x42000000 0x800 0x1000; "\
+		"fi;\0" \
+	"update_kernel=mw 0x42000000 0 0x400000; "\
+		"if tftp 0x42000000 uImage; then " \
+			"mmc erase 0x1800 0x2000; mmc write 0x42000000 0x1800 0x2000; "\
+		"fi;\0" \
+	"update_dtb=mw 0x42000000 0 0x100000; "\
+		"if tftp 0x42000000 imx28-whitetiger.dtb; then " \
+			"mmc erase 0x3800 0x800; mmc write 0x42000000 0x3800 0x800; "\
+		"fi;\0" \
 	"serverip=192.168.0.100\0"\
 	"ipaddr=192.168.0.126\0"\
 	"netmask=255.255.255.0\0"\
