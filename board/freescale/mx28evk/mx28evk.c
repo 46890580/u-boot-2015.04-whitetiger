@@ -118,6 +118,7 @@ int board_eth_init(bd_t *bis)
 	gpio_direction_output(MX28_PAD_GPMI_ALE__GPIO_0_26, 1);
 	udelay(50);
 	gpio_direction_output(MX28_PAD_GPMI_ALE__GPIO_0_26, 0);
+	udelay(50000);
 
 	/* reset phy */
 	gpio_direction_output(MX28_PAD_ENET0_RX_CLK__GPIO_4_13, 0);
