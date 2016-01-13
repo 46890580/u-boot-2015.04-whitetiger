@@ -145,6 +145,7 @@ int mxs_iomux_setup_multiple_pads(const iomux_cfg_t *pad_list, unsigned count)
 	int ret;
 
 	mxs_reinit_all_pins();										/* all pins output, level 0 */
+	gpio_direction_input(MX28_PAD_GPMI_CE0N__GPIO_0_16);		/* tca6416 INT pin, input, must be before vccio_3v3 */
 	udelay(10000);												/* just turned of vccio, wait for 10ms to let peripherals shutdown */
 	gpio_direction_output(MX28_PAD_ENET0_COL__GPIO_4_14, 1);    /* switch on vccio_3v3 */
 
@@ -154,7 +155,6 @@ int mxs_iomux_setup_multiple_pads(const iomux_cfg_t *pad_list, unsigned count)
 			return ret;
 		p++;
 	}
-	gpio_direction_input(MX28_PAD_GPMI_CE0N__GPIO_0_16);		/* tca6416 INT pin, input, otherwise error while probing */
 	gpio_direction_output(MX28_PAD_GPMI_RESETN__GPIO_0_28, 1);	/* keep emmc reset high, not reset */
 	gpio_direction_input(MX28_PAD_LCD_RESET__GPIO_3_30);        /* 3_30 input, high:boot-emmc, low:boot-tftp/nfs */
 
