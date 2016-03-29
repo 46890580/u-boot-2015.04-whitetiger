@@ -12,6 +12,7 @@
 #include <asm/io.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/sys_proto.h>
+#include <asm/gpio.h>
 #include <linux/compiler.h>
 
 #include "mxs_init.h"
@@ -258,12 +259,17 @@ static void mxs_mem_setup_vdda(void)
 		&power_regs->hw_power_vddactrl);
 }
 
+//#define TEST_MEMORY 1
+
+#define MEMSIZE_256M 0x4000000
+#define MEMSIZE_512M 0x8000000
+
 uint32_t mxs_mem_get_size(void)
 {
 #if TEST_MEMORY
     uint32_t i, val;
 #endif
-	uint32_t sz, da;
+	uint32_t sz, da, memsize;
 	uint32_t *vt = (uint32_t *)0x20;
 	/* The following is "subs pc, r14, #4", used as return from DABT. */
 	const uint32_t data_abort_memdetect_handler = 0xe25ef004;
@@ -278,19 +284,21 @@ uint32_t mxs_mem_get_size(void)
 	vt[4] = da;
 
 #if TEST_MEMORY
-    printf("TEST: writing...\r\n");
-    for (i = 0; i < 0x4000000; i++) {
+    (0 != gpio_get_value(MX28_PAD_GPMI_RDN__GPIO_0_24)) ? (memsize = MEMSIZE_512M) : (memsize = MEMSIZE_512M);
+    printf("TEST: writing 0x%x bytes...\r\n", memsize << 2);
+    for (i = 0; i < memsize; i++) {
          *((unsigned int *)(PHYS_SDRAM_1 + (i<<2)))= i | 0xA0000000;
     }
 
-    printf("TEST: reading...\r\n");
-    for (i = 0; i < 0x4000000; i++) {
+    printf("TEST: reading 0x%x bytes...\r\n", memsize << 2);
+    for (i = 0; i < memsize; i++) {
         val = *((unsigned int *)(PHYS_SDRAM_1 + (i<<2)));
         if (val != (i | 0xA0000000)) {
             printf("addr: 0x%x,", i);
             printf(" val: 0x%x\r\n", val);
         }
     }
+    printf("TEST: OK done!\r\n");
 #endif
 
 	return sz;

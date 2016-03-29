@@ -156,6 +156,7 @@ int mxs_iomux_setup_multiple_pads(const iomux_cfg_t *pad_list, unsigned count)
 		p++;
 	}
 	gpio_direction_output(MX28_PAD_GPMI_RESETN__GPIO_0_28, 1);	/* keep emmc reset high, not reset */
+    gpio_direction_input(MX28_PAD_GPMI_RDN__GPIO_0_24);         /* 0_24 input, high:512M DDR, low:256M */
 	gpio_direction_input(MX28_PAD_LCD_RESET__GPIO_3_30);        /* 3_30 input, high:boot-emmc, low:boot-tftp/nfs */
 
 	return 0;
