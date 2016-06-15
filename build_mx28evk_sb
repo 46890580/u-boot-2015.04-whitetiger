@@ -1,4 +1,5 @@
 export CONFIG_USE_PRIVATE_LIBGCC=y
+export CONFIG_SUPPORT_VFAT=y
 make mx28evk_config
 #make mx28evk_nand_config
 make u-boot.sb

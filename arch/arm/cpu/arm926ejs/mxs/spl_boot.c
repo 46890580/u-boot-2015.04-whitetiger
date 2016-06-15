@@ -53,22 +53,27 @@ static const iomux_cfg_t iomux_boot[] = {
 };
 extern void mxs_power_set_auto_restart(int);
 #define DELAY_FOR_RESET 200000
-
-#define XTAL_32768 32768
-#define XTAL_32000 32000
-#define XTAL_FREQ XTAL_32768
-
 static void mxs_init_rtc_source(void)
 {
     struct mxs_rtc_regs *rtc_regs = (struct mxs_rtc_regs *)MXS_RTC_BASE;
-    unsigned int persistent0, new0;
+    unsigned int persistent0;
     unsigned int persistent2;
     unsigned int secs;
     int is_reset = 0;
 
     mxs_power_set_auto_restart(0);
-    new0 = persistent0 = readl(&rtc_regs->hw_rtc_persistent0);
+    persistent0 = readl(&rtc_regs->hw_rtc_persistent0);
     secs = readl(&rtc_regs->hw_rtc_seconds);
+
+    /*if (!(persistent0 & RTC_PERSISTENT0_CLOCKSOURCE)) {
+        printf("RTC:    ext 32.768k, set for the first time\r\n");
+        clrsetbits_le32(&rtc_regs->hw_rtc_persistent0,
+            RTC_PERSISTENT0_XTAL32_FREQ,
+            RTC_PERSISTENT0_CLOCKSOURCE | RTC_PERSISTENT0_XTAL32KHZ_PWRUP);
+        while (readl(&rtc_regs->hw_rtc_stat) & RTC_STAT_NEW_REGS_MASK);
+    } else {
+        printf("RTC:    ext 32.768k, set previously\r\n");
+    }*/
 
     persistent2 = readl(&rtc_regs->hw_rtc_persistent2);
     if (persistent2 & 1) {
@@ -81,46 +86,22 @@ static void mxs_init_rtc_source(void)
         is_reset = 1;
     } else if (persistent0 & RTC_PERSISTENT0_EXTERNAL_RESET) {
         printf("RESET:  reset pin\r\n");
+        clrbits_le32(&rtc_regs->hw_rtc_persistent0, RTC_PERSISTENT0_EXTERNAL_RESET);
         is_reset = 1;
     } else if (persistent0 & RTC_PERSISTENT0_THERMAL_RESET) {
         printf("RESET:  thermal reset\r\n");
+        clrbits_le32(&rtc_regs->hw_rtc_persistent0, RTC_PERSISTENT0_THERMAL_RESET);
         is_reset = 1;
     } else if (persistent0 & RTC_PERSISTENT0_AUTO_RESTART) {
         printf("RESET:  auto restart\r\n");
+        clrbits_le32(&rtc_regs->hw_rtc_persistent0, RTC_PERSISTENT0_AUTO_RESTART);
         is_reset = 1;
     } else {
         printf("PWRUP:  cold power on\r\n");
     }
 
-	/* clr dubious bits first */
-	new0 = new0
-		& (~RTC_PERSISTENT0_CLOCKSOURCE)     /* rtc src, 1: 32K; 0: 24M */
-		& (~RTC_PERSISTENT0_XTAL24KHZ_PWRUP) /* 24M oscillator on/off while pwrdwn, 1:on; 0:off */
-		& (~RTC_PERSISTENT0_XTAL32KHZ_PWRUP) /* 32K oscillator on/off, 1:on; 0:off */
-		& (~RTC_PERSISTENT0_XTAL32_FREQ)     /* freq of 32K xtal: 1:32000; 0:32768 */
-		& (~RTC_PERSISTENT0_EXTERNAL_RESET)
-		& (~RTC_PERSISTENT0_THERMAL_RESET);
-
-	new0 |= RTC_PERSISTENT0_AUTO_RESTART;
-
-#if 1
-/* using 32k as RTC source */
-		if (XTAL_32000 == XTAL_FREQ)
-			new0 |= RTC_PERSISTENT0_XTAL32_FREQ;
-		
-		new0 |= RTC_PERSISTENT0_CLOCKSOURCE | RTC_PERSISTENT0_XTAL32KHZ_PWRUP;
-
-#else
-/* using 24M as RTC source */
-	new0 |= RTC_PERSISTENT0_XTAL24KHZ_PWRUP;
-#endif
-
-	if (persistent0 != new0) {
-		printf("Updating persistent0...");
-		writel(new0,&rtc_regs->hw_rtc_persistent0);
-	    while (readl(&rtc_regs->hw_rtc_stat) & RTC_STAT_NEW_REGS_MASK);
-		printf("done! hw_rtc_stat:0x%x\r\n", readl(&rtc_regs->hw_rtc_stat));
-	}
+    if (is_reset)
+        early_delay(DELAY_FOR_RESET);
 }
 
 static uint8_t mxs_get_bootmode_index(void)
@@ -205,14 +186,9 @@ void mxs_common_spl_init(const uint32_t arg, const uint32_t *resptr,
 	mxs_iomux_setup_multiple_pads(iomux_setup, iomux_size);
 
 	mxs_spl_console_init();
-	early_delay(200000);
 	debug("SPL: Serial Console Initialised\n");
 
     printf("\r\n[SPL]   begin...\r\n");
-
-    bootmode = mxs_get_bootmode_index();
-
-	mxs_power_init();
 
 #if 1
     /* if reset, then delay to let DCDC have time to restore, then we can detect battery properly */
@@ -221,6 +197,10 @@ void mxs_common_spl_init(const uint32_t arg, const uint32_t *resptr,
     /* no matter reset or cold start, delay always */
     early_delay(DELAY_FOR_RESET);
 #endif
+
+    bootmode = mxs_get_bootmode_index();
+
+	mxs_power_init();
 
 	mxs_mem_init();
 	data->mem_dram_size = mxs_mem_get_size();

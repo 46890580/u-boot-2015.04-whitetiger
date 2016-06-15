@@ -1434,7 +1434,7 @@ void mxs_power_init(void)
 	mxs_ungate_power();
 
 	mxs_power_clock2xtal();
-	//mxs_power_set_auto_restart(1);
+	mxs_power_set_auto_restart(1);
 	mxs_power_set_linreg();
 	mxs_power_setup_5v_detect();
 
