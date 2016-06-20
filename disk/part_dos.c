@@ -23,6 +23,8 @@
 
 #define DOS_PART_DEFAULT_SECTOR 512
 
+static int max_par_num;
+
 /* Convert char[4] in little endian format to the host format integer
  */
 static inline int le32_to_int(unsigned char *le32)
@@ -159,6 +161,66 @@ static void print_partition_extended(block_dev_desc_t *dev_desc,
 	return;
 }
 
+static void enum_partition_extended(block_dev_desc_t *dev_desc,
+				     int ext_part_sector, int relative,
+				     int part_num, unsigned int disksig)
+{
+	ALLOC_CACHE_ALIGN_BUFFER(unsigned char, buffer, dev_desc->blksz);
+	dos_partition_t *pt;
+	int i;
+
+	if (dev_desc->block_read(dev_desc->dev, ext_part_sector, 1, (ulong *) buffer) != 1) {
+		printf ("** Can't read partition table on %d:%d **\n",
+			dev_desc->dev, ext_part_sector);
+		return;
+	}
+	i=test_block_type(buffer);
+	if (i != DOS_MBR) {
+		printf ("bad MBR sector signature 0x%02x%02x\n",
+			buffer[DOS_PART_MAGIC_OFFSET],
+			buffer[DOS_PART_MAGIC_OFFSET + 1]);
+		return;
+	}
+
+	if (!ext_part_sector)
+		disksig = le32_to_int(&buffer[DOS_PART_DISKSIG_OFFSET]);
+
+	/* Print all primary/logical partitions */
+	pt = (dos_partition_t *) (buffer + DOS_PART_TBL_OFFSET);
+	for (i = 0; i < 4; i++, pt++) {
+		/*
+		 * fdisk does not show the extended partitions that
+		 * are not in the MBR
+		 */
+
+		if ((pt->sys_ind != 0) &&
+		    (ext_part_sector == 0 || !is_extended (pt->sys_ind)) ) {
+		    if (part_num > max_par_num)
+				max_par_num = part_num;
+		}
+
+		/* Reverse engr the fdisk part# assignment rule! */
+		if ((ext_part_sector == 0) ||
+		    (pt->sys_ind != 0 && !is_extended (pt->sys_ind)) ) {
+			part_num++;
+		}
+	}
+
+	/* Follows the extended partitions */
+	pt = (dos_partition_t *) (buffer + DOS_PART_TBL_OFFSET);
+	for (i = 0; i < 4; i++, pt++) {
+		if (is_extended (pt->sys_ind)) {
+			int lba_start = le32_to_int (pt->start4) + relative;
+
+			enum_partition_extended(dev_desc, lba_start,
+				ext_part_sector == 0  ? lba_start : relative,
+				part_num, disksig);
+		}
+	}
+
+	return;
+}
+
 
 /*  Print a partition that is relative to its Extended partition table
  */
@@ -274,7 +336,12 @@ static int get_partition_info_extended (block_dev_desc_t *dev_desc, int ext_part
 
 	return -1;
 }
-
+int get_max_part_dos(block_dev_desc_t *dev_desc)
+{
+	max_par_num = 0;
+	enum_partition_extended(dev_desc, 0, 0, 1, 0);
+	return max_par_num;
+}
 void print_part_dos (block_dev_desc_t *dev_desc)
 {
 	printf("Part\tStart Sector\tNum Sectors\tUUID\t\tType\n");

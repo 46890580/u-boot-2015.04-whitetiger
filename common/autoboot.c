@@ -284,7 +284,13 @@ const char *bootdelay_process(void)
 extern void check_power_mode(void);
 void autoboot_command(const char *s)
 {
+	int max_mmc_part;
+	char bootargs[100];
+
 	debug("### main_loop: bootcmd=\"%s\"\n", s ? s : "<UNDEFINED>");
+	max_mmc_part = get_mmc_maxpart(0);
+	sprintf(bootargs, "console=ttyAMA0,115200,8n1 rootfstyp=ext3 root=/dev/mmcblk0p%d rw rootwait", max_mmc_part);
+	setenv("bootargs", bootargs);
 
 	if (stored_bootdelay != -1 && s && !abortboot(stored_bootdelay)) {
 #if defined(CONFIG_AUTOBOOT_KEYED) && !defined(CONFIG_AUTOBOOT_KEYED_CTRLC)

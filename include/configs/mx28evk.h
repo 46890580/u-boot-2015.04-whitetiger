@@ -194,7 +194,7 @@
 	"bootargs=console=ttyAMA0,115200,8n1  rootfstype=ext3 root=/dev/mmcblk0p4 rw rootwait\0"\
 	"emmcboot=mmc read 0x42000000 0x1800 0x2000; mmc read 0x42800000 0x3800 0x800; bootm 0x42000000 - 0x42800000\0" \
 	"netbootargs=setenv bootargs console=ttyAMA0,115200,8n1 root=/dev/nfs rw ip=${ipaddr} " \
-		"nfsroot=${serverip}:/nfsroot fec_mac=00:04:9f:99:66:df\0" \
+		"nfsroot=${serverip}:/nfsroot fec_mac=${ethaddr}\0" \
 	"factoryboot=${erase_all}; run netbootargs; tftp 0x42000000 uImage; " \
 		"tftp 0x42800000 imx28-whitetiger.dtb; bootm 0x42000000 - 0x42800000 \0" \
 	"netboot=run netbootargs; tftp 0x42000000 uImage; " \

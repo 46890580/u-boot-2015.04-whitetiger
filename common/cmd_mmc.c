@@ -426,6 +426,26 @@ static int do_mmc_rescan(cmd_tbl_t *cmdtp, int flag,
 
 	return CMD_RET_SUCCESS;
 }
+
+#define DEFAULT_MAX_MMC_PART_NUM 4
+
+int get_mmc_maxpart(int dev)
+{
+	block_dev_desc_t *mmc_dev;
+	struct mmc *mmc;
+	int ret = DEFAULT_MAX_MMC_PART_NUM;
+
+	mmc = init_mmc_device(dev, false);
+	if (mmc) {
+		mmc_dev = mmc_get_dev(dev);
+		if (mmc_dev != NULL && mmc_dev->type != DEV_TYPE_UNKNOWN) {
+			ret = get_max_part_dos(mmc_dev);
+		}
+	}
+
+	return ret;
+}
+
 static int do_mmc_part(cmd_tbl_t *cmdtp, int flag,
 		       int argc, char * const argv[])
 {
