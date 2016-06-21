@@ -38,7 +38,7 @@ struct mxsmmc_priv {
 	struct mmc_config	cfg;	/* mmc configuration */
 };
 
-#define	MXSMMC_MAX_TIMEOUT	1000
+#define	MXSMMC_MAX_TIMEOUT	10000
 #define MXSMMC_SMALL_TRANSFER	512
 
 static int mxsmmc_cd(struct mxsmmc_priv *priv)
