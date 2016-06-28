@@ -59,10 +59,25 @@ static void power_down(int reset)
 	
 }
 
+void check_pwrup_src(void)
+{
+	struct mxs_rtc_regs   *rtc_regs = (struct mxs_rtc_regs   *)MXS_RTC_BASE;
+
+	if (readl(&rtc_regs->hw_rtc_persistent0) & RTC_PERSISTENT0_EXTERNAL_RESET) {
+		clrbits_le32(&rtc_regs->hw_rtc_persistent0, RTC_PERSISTENT0_EXTERNAL_RESET);;
+	} else {
+		puts("Testboard only support power up from reset pin. Please press reset-pin.\n");
+		while (1)
+			getc();
+	}
+}
+
 #if 1
 void reset_cpu(ulong ignored)
 {
 	power_down(1);
+	for (;;)
+		;
 }
 #else
 void reset_cpu(ulong ignored)

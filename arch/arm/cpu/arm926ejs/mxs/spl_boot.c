@@ -86,7 +86,7 @@ static void mxs_init_rtc_source(void)
         is_reset = 1;
     } else if (persistent0 & RTC_PERSISTENT0_EXTERNAL_RESET) {
         printf("RESET:  reset pin\r\n");
-        clrbits_le32(&rtc_regs->hw_rtc_persistent0, RTC_PERSISTENT0_EXTERNAL_RESET);
+        //clrbits_le32(&rtc_regs->hw_rtc_persistent0, RTC_PERSISTENT0_EXTERNAL_RESET);
         is_reset = 1;
     } else if (persistent0 & RTC_PERSISTENT0_THERMAL_RESET) {
         printf("RESET:  thermal reset\r\n");
