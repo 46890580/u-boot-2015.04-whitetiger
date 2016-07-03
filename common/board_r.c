@@ -686,11 +686,11 @@ static int run_main_loop(void)
 #endif
 
 	/* gpio_3_30, high:emmc(default), low:tftp/nfs */
-	if (0 == gpio_get_value(MX28_PAD_LCD_RESET__GPIO_3_30)) {
+	/*if (0 == gpio_get_value(MX28_PAD_LCD_RESET__GPIO_3_30)) {
 		setenv("bootcmd", "run netboot");
 	} else {
 		setenv("bootcmd", "run emmcboot");
-	}
+	}*/
 
 	/* main_loop() can return to retry autoboot, if so just run it again */
 	for (;;)
