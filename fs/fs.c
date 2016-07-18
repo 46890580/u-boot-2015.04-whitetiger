@@ -284,6 +284,29 @@ int fs_size(const char *filename, loff_t *size)
 	return ret;
 }
 
+int fs_mapped_read(const char *filename, void *addr, loff_t offset, loff_t len,
+	    loff_t *actread)
+{
+	struct fstype_info *info = fs_get_info(fs_type);
+	int ret;
+
+	/*
+	 * We don't actually know how many bytes are being read, since len==0
+	 * means read the whole file.
+	 */
+	ret = info->read(filename, addr, offset, len, actread);
+
+	/* If we requested a specific number of bytes, check we got it */
+	if (ret == 0 && len && *actread != len) {
+		printf("** Unable to read file %s **\n", filename);
+		ret = -1;
+	}
+	fs_close();
+
+	return ret;
+}
+
+
 int fs_read(const char *filename, ulong addr, loff_t offset, loff_t len,
 	    loff_t *actread)
 {
@@ -346,6 +369,33 @@ int do_size(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[],
 	setenv_hex("filesize", size);
 
 	return 0;
+}
+
+int read_ethmac(char *ifname, char *devpart, char *filename, int fstype, unsigned char* mac)
+{
+	int ret = -1;
+	loff_t len_read;
+	char buf[18];
+
+	if (fs_set_blk_dev(ifname, devpart, fstype))
+		goto end;
+
+	if ((ret = fs_mapped_read(filename, buf, 0, 17, &len_read)) < 0)
+		goto end;
+
+	if (17 == len_read) {
+		buf[17] = 0;
+
+		eth_parse_enetaddr(buf, mac);
+		if (is_valid_ether_addr(mac)) {
+			ret = 0;
+		} else {
+			memset(mac, 0, 6);
+		}
+	}
+
+end:
+	return ret;
 }
 
 int do_load(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[],
