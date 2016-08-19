@@ -284,7 +284,7 @@ uint32_t mxs_mem_get_size(void)
 	vt[4] = da;
 
 #if TEST_MEMORY
-    (0 != gpio_get_value(MX28_PAD_GPMI_RDN__GPIO_0_24)) ? (memsize = MEMSIZE_512M) : (memsize = MEMSIZE_512M);
+    (0 != gpio_get_value(MX28_PAD_GPMI_RDN__GPIO_0_24)) ? (memsize = MEMSIZE_512M) : (memsize = MEMSIZE_256M);
     printf("TEST: writing 0x%x bytes...\r\n", memsize << 2);
     for (i = 0; i < memsize; i++) {
          *((unsigned int *)(PHYS_SDRAM_1 + (i<<2)))= i | 0xA0000000;
