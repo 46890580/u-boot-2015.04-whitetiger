@@ -40,6 +40,7 @@
 #define CONFIG_CMD_SPI
 /* #define CONFIG_CMD_USB */
 #define CONFIG_CMD_BOOTZ
+#define CONFIG_FS_EXT4
 /* #define CONFIG_CMD_NAND */
 /* #define CONFIG_CMD_NAND_TRIMFFS */
 /* #define CONFIG_VIDEO */

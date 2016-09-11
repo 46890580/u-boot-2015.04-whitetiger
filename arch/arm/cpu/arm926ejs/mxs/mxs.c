@@ -308,7 +308,7 @@ __weak void mx28_adjust_mac(int dev_id, unsigned char *mac)
 }
 
 #ifdef	CONFIG_MX28_FEC_MAC_IN_OCOTP
-
+int read_ethmac(char *ifname, char *devpart, char *filename, int fstype, unsigned char* mac);
 #define	MXS_OCOTP_MAX_TIMEOUT	1000000
 void imx_get_mac_from_fuse(int dev_id, unsigned char *mac)
 {
@@ -317,6 +317,9 @@ void imx_get_mac_from_fuse(int dev_id, unsigned char *mac)
 	uint32_t data;
 
 	memset(mac, 0, 6);
+
+	if (!read_ethmac("mmc", "0:5", "enet0mac", 2, mac))
+		return;
 
 	writel(OCOTP_CTRL_RD_BANK_OPEN, &ocotp_regs->hw_ocotp_ctrl_set);
 
